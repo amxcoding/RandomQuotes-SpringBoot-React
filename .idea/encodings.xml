@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/randomquotes.api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.api/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.application/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.application/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.domain/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.domain/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.infrastructure.identity/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.infrastructure.identity/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.infrastructure.logging/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.infrastructure.logging/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.infrastructure.persistence/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.infrastructure.persistence/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.infrastructure/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.infrastructure/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.logging/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/randomquotes.logging/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+  </component>
+</project>
