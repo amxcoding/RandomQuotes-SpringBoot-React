@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: randomquotesdb
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust # Testing (Insecure!)
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432" # Map host port 5433 to container internal port 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    # --- HEALTHCHECK to wait for the database to be ready ---
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d randomquotesdb" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  flyway:
+    image: flyway/flyway:11-alpine
+    container_name: flyway
+    depends_on:
+      db:
+        condition: service_healthy # Wait until the 'db' service reports healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/randomquotesdb
+      FLYWAY_USER: postgres
+      # FLYWAY_PASSWORD: # Testing (Insecure!)
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    volumes:
+      - ./db/migration:/flyway/sql
+    command: -connectRetries=10 migrate
+
+volumes:
+  postgres_data:
