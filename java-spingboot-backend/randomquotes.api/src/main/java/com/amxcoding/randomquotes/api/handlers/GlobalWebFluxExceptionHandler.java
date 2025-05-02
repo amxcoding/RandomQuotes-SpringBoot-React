@@ -3,6 +3,7 @@ package com.amxcoding.randomquotes.api.handlers;
 import com.amxcoding.randomquotes.api.models.error.ErrorResponse;
 import com.amxcoding.randomquotes.application.exceptions.ApiException;
 import com.amxcoding.randomquotes.application.exceptions.providers.QuoteProviderException;
+import com.amxcoding.randomquotes.application.exceptions.repositories.QuoteLikePersistenceException;
 import com.amxcoding.randomquotes.application.exceptions.repositories.QuotePersistenceException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,12 +30,17 @@ public class GlobalWebFluxExceptionHandler implements ErrorWebExceptionHandler {
     private static final String DEFAULT_ERROR_MESSAGE = "Oops! Something went wrong. We are looking into it!";
     private static final Logger logger = LoggerFactory.getLogger(GlobalWebFluxExceptionHandler.class);
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     public GlobalWebFluxExceptionHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Catches and handles exceptions globally in a WebFlux application. It differentiates between specific API errors
+     * (such as quote or like-related issues) and generic errors, logs relevant information, and generates a structured
+     * error response to return to the client.
+     */
     @Override
     @NonNull
     public Mono<Void> handle(@NonNull ServerWebExchange exchange, @NonNull Throwable throwable) {
@@ -79,11 +85,15 @@ public class GlobalWebFluxExceptionHandler implements ErrorWebExceptionHandler {
         }
     }
 
-    // Keep your helper method for ApiException messages
+    /**
+     * Returns a custom error message based on the type of ApiException, providing user-friendly feedback
+     * for issues like quote service unavailability or persistence problems.
+     */
     private String getApiExceptionMessage(ApiException ex) {
         return switch (ex) {
             case QuoteProviderException exProvider -> "The quote service is currently not available. Please try again later";
             case QuotePersistenceException exPersistence -> "We encountered an issue while processing the quote data. Please try again later.";
+            case QuoteLikePersistenceException exPersistence -> "We encountered an issue while updating your likes. Please try again later.";
             default -> DEFAULT_ERROR_MESSAGE;
         };
     }

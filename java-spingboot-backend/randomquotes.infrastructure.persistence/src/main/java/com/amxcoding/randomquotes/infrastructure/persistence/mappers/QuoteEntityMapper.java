@@ -7,23 +7,18 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-
 @Mapper(componentModel = "spring")
 public abstract class QuoteEntityMapper {
 
     @Mapping(target = "id", source = "id")
-    public abstract QuoteEntity toQuoteEntity(Quote domainQuote);
+    public abstract QuoteEntity toQuoteEntity(Quote quote);
 
     @Mapping(target = "id", source = "id")
     @Mapping(target = "likes", source = "likes")
-    public abstract Quote toDomainQuote(QuoteEntity persistenceQuote);
+    public abstract Quote toQuote(QuoteEntity quoteEntity);
 
     @AfterMapping
-    protected void afterMappingToQuoteEntity(Quote domainQuote, @MappingTarget QuoteEntity entity) {
-        entity.setTextAuthorHash(entity.generateTextAuthorHash(domainQuote.getAuthor(), domainQuote.getText()));
+    void afterMappingToQuoteEntity(Quote quote, @MappingTarget QuoteEntity entity) {
+        entity.setTextAuthorHash(quote.generateTextAuthorHash());
     }
 }

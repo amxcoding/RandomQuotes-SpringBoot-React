@@ -1,10 +1,13 @@
 package com.amxcoding.randomquotes.api.models.quote;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class QuoteResponse {
-    public long id;
-    public String author;
-    public String text;
-    public int likes;
+    private long id;
+    private String author;
+    private String text;
+    private int likes;
+    private boolean isLiked;
 
     public QuoteResponse() {
     }
@@ -35,5 +38,26 @@ public class QuoteResponse {
     }
     public void setLikes(int likes) {
         this.likes = likes;
+    }
+
+    @JsonProperty("isLiked")
+    public boolean isLiked() {
+        return isLiked;
+    }
+
+    @JsonProperty("isLiked")
+    public void setIsLiked(boolean isLiked) {
+        this.isLiked = isLiked;
+    }
+
+    @Override
+    public String toString() {
+        return "QuoteResponse{" +
+                "id=" + id +
+                ", author='" + author + '\'' +
+                ", text='" + text + '\'' +
+                ", likes=" + likes +
+                ", isLiked=" + isLiked +
+                '}';
     }
 }

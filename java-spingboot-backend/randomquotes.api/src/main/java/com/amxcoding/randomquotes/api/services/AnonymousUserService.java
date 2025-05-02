@@ -20,11 +20,14 @@ public class AnonymousUserService implements IAnonymousUserService {
 
     private final boolean secureCookies;
 
-    // Default to false if property is missing
     public AnonymousUserService(@Value("${app.cookie.secure:false}") boolean secureCookies) {
         this.secureCookies = secureCookies;
     }
 
+    /**
+     * Retrieves the anonymous user ID from the cookies if it exists; otherwise, creates a new user ID,
+     * stores it in a cookie, and returns the new ID. Ensures the user is consistently tracked across sessions.
+     */
     @Override
     public String getOrCreateAnonymousUserId(ServerHttpRequest request, ServerHttpResponse response) {
         // Look for the user ID in the cookies

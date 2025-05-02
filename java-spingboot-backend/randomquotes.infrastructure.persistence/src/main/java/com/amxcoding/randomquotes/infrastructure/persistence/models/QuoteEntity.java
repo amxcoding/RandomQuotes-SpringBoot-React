@@ -4,10 +4,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.Objects;
 
 @Table(name = "quotes")
@@ -36,7 +32,6 @@ public class QuoteEntity {
         this.author = author;
         this.text = text;
         this.likes = likes;
-        this.textAuthorHash = generateTextAuthorHash(author, text);
     }
 
     public QuoteEntity(Long id, String author, String text, int likes, String textAuthorHash) {
@@ -65,19 +60,7 @@ public class QuoteEntity {
         this.textAuthorHash = textAuthorHash;
     }
 
-    // public because MapStruct  does not work well with constructor
-    // set manually after mapping
-    public String generateTextAuthorHash(String author, String text) {
-        String combined = author + "::" + text;
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(combined.getBytes(StandardCharsets.UTF_8));
-            Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
-            return encoder.encodeToString(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
-    }
+
 
     @Override
     public boolean equals(Object o) {

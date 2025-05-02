@@ -9,6 +9,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public interface IQuoteProvider {
-    Mono<Optional<Quote>> fetchRandomQuote();
+//    Mono<Optional<Quote>> fetchRandomQuote();
     Mono<Optional<List<Quote>>> fetchQuotes();
 }

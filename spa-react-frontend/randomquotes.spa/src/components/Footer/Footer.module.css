@@ -1,0 +1,22 @@
+.footer {
+  background-color: var(--color-header-footer-bg);
+  color: var(--color-text);
+  padding: 0;
+  height: 50px;
+  border-top: 1px solid var(--color-border);
+  margin-top: auto; /* Push footer to bottom in flex container */
+  width: 100%;
+}
+
+.footerContent {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 0.9rem;
+}
+
+.footer p {
+  margin: 0;
+  opacity: 0.8;
+}

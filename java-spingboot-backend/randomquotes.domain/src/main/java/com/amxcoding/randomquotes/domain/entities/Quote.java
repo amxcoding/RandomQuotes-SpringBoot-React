@@ -3,6 +3,10 @@ package com.amxcoding.randomquotes.domain.entities;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Objects;
 
 // Caveat: according to clean code practice these annotations should not be used on domain classes
@@ -31,7 +35,7 @@ public class Quote {
 
     // new quote constructor
     public Quote(String author, String text) {
-        this(null, author, text, 0);
+        this(null, author, text);
     }
 
     public Quote() {
@@ -48,6 +52,20 @@ public class Quote {
 
     public int getLikes() { return likes; }
     public void setLikes(int likes) { this.likes = likes; }
+
+    // TODO testen
+    public String generateTextAuthorHash() {
+        String combined = author.trim().toLowerCase() + "::" + text.trim().toLowerCase();
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(combined.getBytes(StandardCharsets.UTF_8));
+            Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+            return encoder.encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    }
 
     @Override
     public boolean equals(Object o) {

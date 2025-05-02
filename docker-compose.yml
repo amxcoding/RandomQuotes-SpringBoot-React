@@ -37,5 +37,15 @@ services:
       - ./db/migration:/flyway/sql
     command: -connectRetries=10 migrate
 
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379" # Expose Redis port
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  redis_data:

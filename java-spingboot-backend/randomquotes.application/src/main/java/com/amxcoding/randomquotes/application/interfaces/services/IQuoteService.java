@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface IQuoteService {
     Mono<Optional<Quote>> getRandomQuote();
-    Mono<Quote> createQuote(Quote quote);
-    Mono<Optional<Quote>> getQuoteById(Long id);
+    Mono<Optional<Quote>> getQuoteById(Long quoteId);
     Mono<Quote> updateQuote(Quote quote);
+
 }

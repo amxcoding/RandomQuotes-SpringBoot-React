@@ -25,6 +25,7 @@
         <okhttp3.version>4.12.0</okhttp3.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <r2dbc.version>1.0.7.RELEASE</r2dbc.version>
+        <mvn-surfire.version>3.5.0</mvn-surfire.version>
     </properties>
 
     <modules>
@@ -132,7 +133,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.5.0</version>
+                    <version>${mvn-surfire.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -147,12 +148,14 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>${mvn-surfire.version}</version>
             </plugin>
 
             <!-- MapStruct Processor for Annotation Processing -->
             <plugin>
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct-processor</artifactId>
+                <version>${mapstruct.version}</version>
             </plugin>
         </plugins>
     </build>

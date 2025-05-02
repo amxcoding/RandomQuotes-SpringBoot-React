@@ -29,33 +29,33 @@ public class ZenQuotesProvider implements IQuoteProvider {
         this.webClient = webClientBuilder.baseUrl(baseUrl).build();
     }
 
-    /**
-     * Exception will propagate up to the globalExceptionHandler
-     */
-    @Override
-    public Mono<Optional<Quote>> fetchRandomQuote() {
-        return webClient
-                .get()
-                .uri("/random")
-                .retrieve()
-                .bodyToMono(Quote[].class)
-                .map(quotes -> {
-                    if (quotes != null && quotes.length > 0) {
-                        return Optional.of(quotes[0]);
-                    } else {
-                        return Optional.<Quote>empty();
-                    }
-                })
-                .doOnError(ex -> {
-                    if (ex instanceof WebClientResponseException webEx) {
-                        logger.error("ZenQuotesProvider-fetchRandomQuote", "HTTP Error (status {})  {} - {}", String.valueOf(webEx.getStatusCode()), webEx.getResponseBodyAsString(), ex);
-                    } else {
-                        logger.error("ZenQuotesProvider-fetchRandomQuote","Other errors on getting the quote {}: {}", ex.getMessage(), ex);
-                    }
-                })
-                .onErrorMap(ex -> new QuoteProviderException("Error fetching random quote: " + ex))
-                .defaultIfEmpty(Optional.empty());
-    }
+//    /**
+//     * Exception will propagate up to the globalExceptionHandler
+//     */
+//    @Override
+//    public Mono<Optional<Quote>> fetchRandomQuote() {
+//        return webClient
+//                .get()
+//                .uri("/random")
+//                .retrieve()
+//                .bodyToMono(Quote[].class)
+//                .map(quotes -> {
+//                    if (quotes != null && quotes.length > 0) {
+//                        return Optional.of(quotes[0]);
+//                    } else {
+//                        return Optional.<Quote>empty();
+//                    }
+//                })
+//                .doOnError(ex -> {
+//                    if (ex instanceof WebClientResponseException webEx) {
+//                        logger.error("ZenQuotesProvider-fetchRandomQuote", "HTTP Error (status {})  {} - {}", String.valueOf(webEx.getStatusCode()), webEx.getResponseBodyAsString(), ex);
+//                    } else {
+//                        logger.error("ZenQuotesProvider-fetchRandomQuote","Other errors on getting the quote {}: {}", ex.getMessage(), ex);
+//                    }
+//                })
+//                .onErrorMap(ex -> new QuoteProviderException("Error fetching random quote: " + ex))
+//                .defaultIfEmpty(Optional.empty());
+//    }
 
     /**
      * Exception will propagate up to the globalExceptionHandler

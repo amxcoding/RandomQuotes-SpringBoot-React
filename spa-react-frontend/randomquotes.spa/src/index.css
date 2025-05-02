@@ -1,0 +1,68 @@
+:root {
+  /* Sand Theme Colors */
+  --color-background: #fdf6e3; /* A light parchment/sand color */
+  --color-text: #5b4636; /* Darker brown for text */
+  --color-primary: #c19a6b; /* Fallow/darker sand for accents */
+  --color-secondary: #d2b48c; /* Tan for secondary elements */
+  --color-header-footer-bg: #eae0c8; /* Slightly darker beige for header/footer */
+  --color-quote-bg: #ffffff;
+  --color-border: #d8cdba;
+
+  --font-family-sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-family-serif: Georgia, 'Times New Roman', Times, serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family-sans);
+  background-color: var(--color-background);
+  background-image: linear-gradient(to bottom, #fdf6e3, #fbf0d0);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+a {
+  text-decoration: none;
+  color: var(--color-primary);
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  color: var(--color-text);
+}
+
+/* Utility for centering content */
+.container {
+  width: 100%;
+  max-width: 1024px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+button {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button:hover {
+  background-color: var(--color-secondary);
+}
+
+button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
