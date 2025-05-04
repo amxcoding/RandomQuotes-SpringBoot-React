@@ -1,5 +1,6 @@
 package com.amxcoding.randomquotes.application.services;
 
+import com.amxcoding.randomquotes.application.exceptions.repositories.QuoteLikePersistenceException;
 import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteLikeRepository;
 import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteRepository;
 import com.amxcoding.randomquotes.application.interfaces.services.IQuoteLikeService;
@@ -27,6 +28,9 @@ public class QuoteLikeService implements IQuoteLikeService {
     }
 
 
+    /**
+     *  Create a new entry with unique columns (userId, quoteId)
+     */
     @Transactional
     @Override
     public Mono<Boolean> likeQuote(String userId, Long quoteId) {
@@ -34,14 +38,24 @@ public class QuoteLikeService implements IQuoteLikeService {
             return Mono.error(new IllegalArgumentException("UserId and quoteId cannot be null."));
         }
 
-        QuoteLike like = new QuoteLike(null, userId, quoteId);
+        // Check if the entry already exists if so throw
+        return quoteLikeRepository.findByUserIdAndQuoteId(userId, quoteId)
+                .flatMap(quoteLike -> {
+                    if (quoteLike.isPresent()) {
+                        logger.error("Error liking quote, there exists an entry: ({}, {})", userId, quoteId);
+                        return Mono.error(new QuoteLikePersistenceException("Error liking quote, there exists an entry."));
+                    }
+                    QuoteLike like = new QuoteLike(null, userId, quoteId);
 
-        // errors will be propagated
-        return quoteLikeRepository.saveQuoteLike(like)
-                .flatMap(savedLike -> quoteRepository.incrementLikeCount(quoteId));
+                    // errors will be propagated
+                    return quoteLikeRepository.saveQuoteLike(like)
+                            .flatMap(savedLike -> quoteRepository.incrementLikeCount(quoteId));
+                });
     }
 
-
+    /**
+     * Unlike a quote by deleting its entry and decrementing likes on quote
+     */
     @Transactional
     @Override
     public Mono<Boolean> unlikeQuote(String userId, Long quoteId) {
@@ -62,7 +76,10 @@ public class QuoteLikeService implements IQuoteLikeService {
                 });
     }
 
-
+    /**
+     *
+     * Checks if an entry already exists
+     */
     @Override
     public Mono<Boolean> checkUserLike(String userId, Long quoteId) {
         if (userId == null || quoteId == null) {

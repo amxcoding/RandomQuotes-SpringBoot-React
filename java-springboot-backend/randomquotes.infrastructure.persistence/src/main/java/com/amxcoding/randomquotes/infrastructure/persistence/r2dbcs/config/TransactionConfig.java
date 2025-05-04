@@ -10,8 +10,7 @@ public class TransactionConfig {
 
     @Bean
     public ReactiveTransactionManager transactionManager(ConnectionFactory connectionFactory) {
-        R2dbcTransactionManager manager = new R2dbcTransactionManager(connectionFactory);
-        return manager;
+        return new R2dbcTransactionManager(connectionFactory);
     }
 }
 

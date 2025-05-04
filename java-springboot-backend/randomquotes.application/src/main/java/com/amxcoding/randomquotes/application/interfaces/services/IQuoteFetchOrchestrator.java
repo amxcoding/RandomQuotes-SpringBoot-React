@@ -1,4 +1,4 @@
-package com.amxcoding.randomquotes.application.interfaces.caching;
+package com.amxcoding.randomquotes.application.interfaces.services;
 
 import com.amxcoding.randomquotes.domain.entities.Quote;
 import reactor.core.publisher.Mono;
@@ -6,7 +6,6 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.Optional;
 
-public interface IQuotesCache {
+public interface IQuoteFetchOrchestrator {
     Mono<Optional<List<Quote>>> getQuotes();
 }
-

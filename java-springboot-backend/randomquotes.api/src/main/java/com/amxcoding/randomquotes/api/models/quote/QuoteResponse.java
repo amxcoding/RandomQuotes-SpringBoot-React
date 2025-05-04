@@ -1,12 +1,22 @@
 package com.amxcoding.randomquotes.api.models.quote;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JacksonXmlRootElement(localName = "quote")
 public class QuoteResponse {
+    @JacksonXmlProperty(isAttribute = true)
     private long id;
+    @JacksonXmlProperty(localName = "author")
     private String author;
+    @JacksonXmlProperty(localName = "text")
     private String text;
+    @JacksonXmlProperty(localName = "likes")
     private int likes;
+    @JacksonXmlProperty(localName = "isLiked")
     private boolean isLiked;
 
     public QuoteResponse() {

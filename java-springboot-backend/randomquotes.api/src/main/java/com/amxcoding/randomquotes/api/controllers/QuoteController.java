@@ -7,6 +7,7 @@ import com.amxcoding.randomquotes.api.models.quote.QuoteResponse;
 import com.amxcoding.randomquotes.application.interfaces.services.IQuoteLikeService;
 import com.amxcoding.randomquotes.application.interfaces.services.IQuoteService;
 import com.amxcoding.randomquotes.domain.entities.Quote;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -37,7 +38,7 @@ public class QuoteController {
     /**
      * Returns a random quote and whether the current user has liked it based on a tracking cookie.
      */
-    @GetMapping("/random")
+    @GetMapping(path = "/random", produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE })
     public Mono<ResponseEntity<QuoteResponse>> getRandomQuote(ServerHttpRequest request, ServerHttpResponse response) {
         String userId = anonymousUserService.getOrCreateAnonymousUserId(request, response);
 
@@ -48,7 +49,7 @@ public class QuoteController {
     /**
      * Likes the specified quote for the current anonymous user and returns the updated quote.
      */
-    @GetMapping(path = "/{id}/like")
+    @GetMapping(path = "/{id}/like", produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE })
     public Mono<ResponseEntity<QuoteResponse>> likeQuoteByHash(@PathVariable("id") Long id,
                                                                ServerHttpRequest request,
                                                                ServerHttpResponse response) {
@@ -63,7 +64,7 @@ public class QuoteController {
      * Unlikes the specified quote for the current anonymous user and returns the updated quote.
      * The entry (userId, quoteId) is deleted
      */
-    @DeleteMapping(path = "/{id}/like")
+    @DeleteMapping(path = "/{id}/like", produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE })
     public Mono<ResponseEntity<QuoteResponse>> unlikeQuoteByHash(@PathVariable("id") Long id,
                                                                  ServerHttpRequest request,
                                                                  ServerHttpResponse response) {

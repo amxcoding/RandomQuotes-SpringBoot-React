@@ -5,7 +5,7 @@ import com.amxcoding.randomquotes.infrastructure.persistence.models.QuoteLikeEnt
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
-public interface QuoteLikeMapper {
+public interface QuoteLikeEntityMapper {
     QuoteLikeEntity toQuoteLikeEntity(QuoteLike quoteLike);
     QuoteLike toQuoteLike(QuoteLikeEntity quoteLike);
 

@@ -1,4 +1,4 @@
-package com.amxcoding.randomquotes.application.caching.config;
+package com.amxcoding.randomquotes.application.services.caching.config;
 
 import com.amxcoding.randomquotes.application.common.Constants;
 import com.github.benmanes.caffeine.cache.Caffeine;

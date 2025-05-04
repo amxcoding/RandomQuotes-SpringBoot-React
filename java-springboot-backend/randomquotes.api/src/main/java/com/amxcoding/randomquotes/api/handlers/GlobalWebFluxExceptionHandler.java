@@ -5,6 +5,8 @@ import com.amxcoding.randomquotes.application.exceptions.ApiException;
 import com.amxcoding.randomquotes.application.exceptions.providers.QuoteProviderException;
 import com.amxcoding.randomquotes.application.exceptions.repositories.QuoteLikePersistenceException;
 import com.amxcoding.randomquotes.application.exceptions.repositories.QuotePersistenceException;
+import com.amxcoding.randomquotes.application.exceptions.services.QuoteCacheException;
+import com.amxcoding.randomquotes.application.exceptions.services.QuoteFetchOrchestratorException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -94,6 +96,8 @@ public class GlobalWebFluxExceptionHandler implements ErrorWebExceptionHandler {
             case QuoteProviderException exProvider -> "The quote service is currently not available. Please try again later";
             case QuotePersistenceException exPersistence -> "We encountered an issue while processing the quote data. Please try again later.";
             case QuoteLikePersistenceException exPersistence -> "We encountered an issue while updating your likes. Please try again later.";
+            case QuoteFetchOrchestratorException exOrchestrator -> "The quote service is currently not available. Please try again later";
+            case QuoteCacheException exCache -> "The quote service is currently not available. Please try again later";
             default -> DEFAULT_ERROR_MESSAGE;
         };
     }

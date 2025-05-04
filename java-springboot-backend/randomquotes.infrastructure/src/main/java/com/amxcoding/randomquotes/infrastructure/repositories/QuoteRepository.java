@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
@@ -34,10 +35,22 @@ public class QuoteRepository implements IQuoteRepository {
         this.databaseClient = databaseClient;
     }
 
-
+    private static final BiFunction<Row, RowMetadata, QuoteEntity> QUOTE_ENTITY_MAPPING = (row, rowMetadata) -> {
+        QuoteEntity entity = new QuoteEntity();
+        entity.setId(row.get("id", Long.class));
+        entity.setAuthor(row.get("author", String.class));
+        entity.setText(row.get("text", String.class));
+        entity.setLikes(Optional.ofNullable(row.get("likes", Integer.class)).orElse(0));
+        entity.setTextAuthorHash(row.get("text_author_hash", String.class));
+        entity.setProvider(row.get("provider", String.class));
+        return entity;
+    };
+    /**
+     * Inserts a batch of quotes into the database, skipping any duplicates based on the text_author_hash.
+     */
     @Transactional
     @Override
-    public Mono<Void> bulkInsertQuotesIgnoreConflicts(List<Quote> quotes) {
+    public Mono<Void> bulkInsertQuotesIgnoreConflicts(List<Quote> quotes, String providerName) {
         if (quotes.isEmpty()) {
             return Mono.empty();
         }
@@ -47,7 +60,7 @@ public class QuoteRepository implements IQuoteRepository {
                 .toList();
         if (quoteEntities.isEmpty()) return Mono.empty();
 
-        StringBuilder sql = new StringBuilder("INSERT INTO quotes (author, text, likes, text_author_hash) VALUES ");
+        StringBuilder sql = new StringBuilder("INSERT INTO quotes (author, text, likes, text_author_hash, provider) VALUES ");
         Map<String, Object> bindings = new HashMap<>();
 
         for (int i = 0; i < quoteEntities.size(); i++) {
@@ -58,36 +71,41 @@ public class QuoteRepository implements IQuoteRepository {
             sql.append("(:author").append(i)
                     .append(", :text").append(i)
                     .append(", :likes").append(i)
-                    .append(", :hash").append(i).append(")");
+                    .append(", :hash").append(i)
+                    .append(", :provider").append(i)
+                    .append(")");
 
             // bindings/ prepared statements against sqli
             bindings.put("author" + i, q.getAuthor());
             bindings.put("text" + i, q.getText());
             bindings.put("likes" + i, q.getLikes());
             bindings.put("hash" + i, q.getTextAuthorHash());
+            bindings.put("provider" + i, providerName);
         }
 
         sql.append(" ON CONFLICT (text_author_hash) DO NOTHING");
         DatabaseClient.GenericExecuteSpec spec = databaseClient.sql(sql.toString());
 
         for (Map.Entry<String, Object> entry : bindings.entrySet()) {
-            spec = spec.bind(entry.getKey(), entry.getValue());
+            spec = spec.bind(entry.getKey(), entry.getValue() != null ? entry.getValue() : "");
         }
 
         return spec.then()
                 .onErrorMap(ex -> {
                     String finalSql = sql.toString();
-
-                    logger.error("Error during bulk quote insert. Number of quotes: {}, SQL (snippet): [{}]",
+                    logger.error("Error during bulk quote insert from provider {}. Number of quotes: {}, SQL (snippet): [{}]",
+                            providerName, // Add provider name to log
                             quoteEntities.size(),
-                            finalSql.substring(0, Math.min(finalSql.length(), 100)), // Log a snippet
+                            finalSql.substring(0, Math.min(finalSql.length(), 100)),
                             ex);
 
-                    return new QuotePersistenceException("Error during bulk quote insert. " + ex.getMessage(), ex);
-                }); // error will propagate up as intended
+                    return new QuotePersistenceException("Error during bulk quote insert from provider " + providerName + ". " + ex.getMessage(), ex);
+                });// error will propagate up as intended
     }
 
-
+    /**
+     * Finds a quote by its unique hash derived from the text and author.
+     */
     @Override
     public Mono<Optional<Quote>> findByTextAuthorHash(String textAuthorHash) {
         return quoteR2dbcRepository.findByTextAuthorHash(textAuthorHash)
@@ -125,6 +143,10 @@ public class QuoteRepository implements IQuoteRepository {
     }
 
 
+    /**
+     * Increases the like count for the specified quote by one using atomic operations.
+     * Update directly in the db, to avoid race conditions
+     */
     @Override
     public Mono<Boolean> incrementLikeCount(Long quoteId) {
         if (quoteId == null) {
@@ -135,7 +157,10 @@ public class QuoteRepository implements IQuoteRepository {
         return executeCounterUpdate(incrementSql, quoteId, "increment");
     }
 
-
+    /**
+     * Decrease the like count for the specified quote by one using atomic operations.
+     * Update directly in the db, to avoid race conditions
+     */
     @Override
     public Mono<Boolean> decrementLikeCount(Long quoteId) {
         if (quoteId == null) {
@@ -157,9 +182,19 @@ public class QuoteRepository implements IQuoteRepository {
     }
 
     @Override
+    public Mono<Long> countByProvider(String providerName) {
+        return quoteR2dbcRepository.countByProvider(providerName)
+                .onErrorMap(ex -> {
+                    logger.error("Error counting quotes for provider {}: {}", providerName, ex.getMessage(), ex);
+                    return new QuotePersistenceException("Database error counting quotes for provider " + providerName, ex);
+                })
+                .switchIfEmpty(Mono.just(0L));
+    }
+
+    @Override
     public Mono<Optional<List<Quote>>> findRandomQuotes(int amount) {
         if (amount <= 0) {
-            throw new IllegalArgumentException("0 is not allowed!");
+            return Mono.error(new IllegalArgumentException("Amount cannot be 0"));
         }
 
         String randomQuoteSql = "SELECT id, author, text, likes FROM quotes ORDER BY RANDOM() LIMIT :amount";
@@ -172,20 +207,27 @@ public class QuoteRepository implements IQuoteRepository {
                 .collectList()
                 .map(Optional::of)
                 .onErrorMap(ex -> {
-                    // Log the error and wrap it in a domain-specific exception
                     logger.error("Error fetching {} random quotes: {}", amount, ex.getMessage(), ex);
                     return new QuotePersistenceException(String.format("Database error fetching %d random quotes", amount), ex);
                 });
     }
 
-    private static final BiFunction<Row, RowMetadata, QuoteEntity> QUOTE_ENTITY_MAPPING = (row, rowMetadata) -> {
-        QuoteEntity entity = new QuoteEntity(); // Or use constructor if available
-        entity.setId(row.get("id", Long.class));
-        entity.setAuthor(row.get("author", String.class));
-        entity.setText(row.get("text", String.class));
-        entity.setLikes(Optional.ofNullable(row.get("likes", Integer.class)).orElse(0));
-        return entity;
-    };
+    /**
+     * Used mainly to get
+     */
+    public Flux<Quote> findAllQuotes(int limit) {
+        String sql = "SELECT id, author, text, likes FROM quotes ORDER BY id LIMIT :limit";
+
+        return this.databaseClient.sql(sql)
+                .bind("limit", limit)
+                .map(QUOTE_ENTITY_MAPPING)
+                .all()
+                .map(quoteEntityMapper::toQuote)
+                .onErrorMap(ex -> {
+                    logger.error("Error fetching all quotes: {}", ex.getMessage(), ex);
+                    return new QuotePersistenceException("Database error fetching all quotes", ex);
+                });
+    }
 
 
     private Mono<Boolean> executeCounterUpdate(String sql, Long quoteId, String operationDescription) {

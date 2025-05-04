@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS quotes
     text TEXT NOT NULL,
     likes INTEGER NOT NULL DEFAULT 0,
     text_author_hash VARCHAR(255) NOT NULL,
+    provider VARCHAR(100) NOT NULL,
     CONSTRAINT quotes_pkey PRIMARY KEY (id),
     CONSTRAINT uk_quotes_text_author_hash UNIQUE (text_author_hash) -- quotes should be added once
 );

@@ -1,8 +1,9 @@
+// TODO FIX
 //package com.amxcoding.randomquotes.application.caching;
 //
 //import com.amxcoding.randomquotes.application.common.Constants;
 //import com.amxcoding.randomquotes.application.exceptions.providers.QuoteProviderException;
-//import com.amxcoding.randomquotes.application.interfaces.caching.IQuotesCache;
+//import com.amxcoding.randomquotes.application.interfaces.services.IQuotesCache;
 //import com.amxcoding.randomquotes.application.interfaces.providers.IQuoteProvider;
 //import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteLikeRepository;
 //import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteRepository;

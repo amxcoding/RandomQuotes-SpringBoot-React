@@ -34,21 +34,18 @@ public class QuoteLike {
     public void setId(Long id) {
         this.id = id;
     }
-
     public String getUserId() {
         return userId;
     }
     public void setUserId(String userId) {
         this.userId = userId;
     }
-
     public Long getQuoteId() {
         return quoteId;
     }
     public void setQuoteId(Long quoteId) {
         this.quoteId = quoteId;
     }
-
     public OffsetDateTime getLikedAt() {
         return likedAt;
     }

@@ -17,9 +17,9 @@ function AboutPage(): JSX.Element {
         <li>Reactive programming model using Spring WebFlux and R2DBC for asynchronous, non-blocking data flows</li>
         <li>Anonymous user tracking through secure, HttpOnly cookies</li>
         <li>User likes are stored in the database and tracked using browser cookies for identification.</li>
+        <li>Resilient fallback mechanism to handle failures when fetching data from external APIs</li>
         {/* TODO!!: */}
-        {/* <li>Live stream interface showing recently liked quotes in real-time</li>
-        <li>Resilient fallback mechanism to handle failures when fetching data from external APIs</li> */}
+        {/* <li>Live stream interface showing recently liked quotes in real-time</li> */}
       </ul>
 
       <p>Inspirational quotes provided by <a href="https://zenquotes.io/" target="_blank">ZenQuotes API</a></p>

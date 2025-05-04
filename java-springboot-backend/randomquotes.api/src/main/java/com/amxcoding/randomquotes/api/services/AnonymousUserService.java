@@ -44,7 +44,6 @@ public class AnonymousUserService implements IAnonymousUserService {
             return userId;
         }
 
-        // If cookie not found, create a new one
         String newUserId = UUID.randomUUID().toString();
         ResponseCookie newCookie = ResponseCookie.from(USER_ID_COOKIE_NAME, newUserId)
                 .httpOnly(true)
@@ -53,7 +52,6 @@ public class AnonymousUserService implements IAnonymousUserService {
                 .secure(secureCookies)
                 .build();
 
-        // Add the cookie to the response (using WebFlux's response.addCookie)
         response.addCookie(newCookie);
 
         return newUserId;

@@ -1,12 +1,22 @@
 package com.amxcoding.randomquotes.api.models.error;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+
 import java.time.LocalDateTime;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JacksonXmlRootElement(localName = "error")
 public class ErrorResponse {
 
+    @JacksonXmlProperty(localName = "statuscode")
     private int statusCode;
+    @JacksonXmlProperty(localName = "message")
     private String message;
+    @JacksonXmlProperty(localName = "details")
     private String details;
+    @JacksonXmlProperty(localName = "timestamp")
     private LocalDateTime timestamp;
 
     public ErrorResponse(int statusCode, String message, String details) {

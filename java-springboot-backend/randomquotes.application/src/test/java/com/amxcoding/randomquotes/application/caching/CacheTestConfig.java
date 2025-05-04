@@ -1,9 +1,11 @@
+// TODO FIX
 //package com.amxcoding.randomquotes.application.caching;
 //
 //import com.amxcoding.randomquotes.application.common.Constants;
-//import com.amxcoding.randomquotes.application.interfaces.caching.IQuotesCache;
+//import com.amxcoding.randomquotes.application.interfaces.services.IQuotesCache;
 //import com.amxcoding.randomquotes.application.interfaces.providers.IQuoteProvider;
 //import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteRepository;
+//import com.amxcoding.randomquotes.application.services.caching.QuotesCache;
 //import org.springframework.beans.factory.annotation.Qualifier;
 //import org.springframework.boot.test.context.TestConfiguration;
 //import org.springframework.cache.CacheManager;
@@ -15,19 +17,16 @@
 //@EnableCaching
 //public class CacheTestConfig {
 //
-//    // Define the bean under test explicitly
 //    @Bean
 //    public IQuotesCache quotesCache(
-//            @Qualifier("zenquotes") IQuoteProvider quoteProvider, // Inject mocks
-//            IQuoteRepository quoteRepository) {
-//        return new QuotesCache(quoteProvider, quoteRepository);
+//            @Qualifier("zenquotes") IQuoteProvider quoteProvider,
+//            IQuoteRepository quoteRepository,
+//            CacheManager cacheManager) {
+//        return new QuotesCache(quoteProvider, quoteRepository, cacheManager);
 //    }
 //
-//    // Define a simple CacheManager for the test context
 //    @Bean
 //    public CacheManager cacheManager() {
-//        // Use a simple in-memory cache manager for testing
-//        // Make sure it knows about the cache name used in @Cacheable
 //        return new ConcurrentMapCacheManager(Constants.Cache.QUOTES_CACHE);
 //    }
 //}

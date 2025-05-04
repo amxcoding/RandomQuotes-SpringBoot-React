@@ -1,7 +1,6 @@
 package com.amxcoding.randomquotes.application.services;
 
-import com.amxcoding.randomquotes.application.exceptions.repositories.QuotePersistenceException;
-import com.amxcoding.randomquotes.application.interfaces.caching.IQuotesCache;
+import com.amxcoding.randomquotes.application.interfaces.services.IQuoteCache;
 import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteRepository;
 import com.amxcoding.randomquotes.application.interfaces.services.IQuoteService;
 import com.amxcoding.randomquotes.domain.entities.Quote;
@@ -17,11 +16,11 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class QuoteService implements IQuoteService {
-    private final IQuotesCache quotesCache;
+    private final IQuoteCache quotesCache;
     private final IQuoteRepository quoteRepository;
     private static final Logger logger = LoggerFactory.getLogger(QuoteService.class);
 
-    public QuoteService(IQuotesCache quotesCache,
+    public QuoteService(IQuoteCache quotesCache,
                         IQuoteRepository quoteRepository) {
         this.quotesCache = quotesCache;
         this.quoteRepository = quoteRepository;
@@ -69,7 +68,7 @@ public class QuoteService implements IQuoteService {
     @Override
     public Mono<Quote> updateQuote(Quote quote) {
         if (quote.getId() == null) {
-            return Mono.error(new QuotePersistenceException("Quote ID must not be null for update"));
+            return Mono.error(new IllegalArgumentException("Quote ID must not be null for update"));
         }
 
         return quoteRepository.saveQuote(quote);

@@ -1,23 +1,15 @@
 package com.amxcoding.randomquotes.domain.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Objects;
 
-// Caveat: according to clean code practice these annotations should not be used on domain classes
-@JsonIgnoreProperties(ignoreUnknown = true)
+
 public class Quote {
     private Long id;
-
-    @JsonProperty("a")
     private String author;
-
-    @JsonProperty("q")
     private String text;
 
     private int likes = 0;
@@ -43,13 +35,10 @@ public class Quote {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
     public String getAuthor() { return author; }
     public void setAuthor(String author) { this.author = author; }
-
     public String getText() { return text; }
     public void setText(String text) { this.text = text; }
-
     public int getLikes() { return likes; }
     public void setLikes(int likes) { this.likes = likes; }
 
