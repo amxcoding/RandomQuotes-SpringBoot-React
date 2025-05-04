@@ -8,6 +8,5 @@ import java.util.Optional;
 public interface IQuoteService {
     Mono<Optional<Quote>> getRandomQuote();
     Mono<Optional<Quote>> getQuoteById(Long quoteId);
-    Mono<Quote> updateQuote(Quote quote);
 
 }

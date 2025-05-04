@@ -1,6 +1,3 @@
--- src/test/resources/schema.sql (H2 compatible)
-
--- Drop tables in reverse order of dependency, if they exist
 DROP TABLE IF EXISTS quote_like;
 DROP TABLE IF EXISTS quotes;
 
@@ -10,7 +7,8 @@ CREATE TABLE quotes (
     author VARCHAR(125) NOT NULL,
     text TEXT NOT NULL,
     likes INT DEFAULT 0 NOT NULL,
-    text_author_hash VARCHAR(255) NOT NULL UNIQUE
+    text_author_hash VARCHAR(255) NOT NULL UNIQUE,
+    provider VARCHAR(100) NOT NULL
 );
 
 -- Create quote_like table using H2 syntax
@@ -23,5 +21,4 @@ CREATE TABLE quote_like (
     CONSTRAINT uk_user_quote UNIQUE (user_id, quote_id)
 );
 
--- Create index
 CREATE INDEX idx_quote_like_user_id ON quote_like(user_id);

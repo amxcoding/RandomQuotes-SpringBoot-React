@@ -65,13 +65,4 @@ public class QuoteService implements IQuoteService {
         return quoteRepository.findById(quoteId);
     }
 
-    @Override
-    public Mono<Quote> updateQuote(Quote quote) {
-        if (quote.getId() == null) {
-            return Mono.error(new IllegalArgumentException("Quote ID must not be null for update"));
-        }
-
-        return quoteRepository.saveQuote(quote);
-    }
-
 }

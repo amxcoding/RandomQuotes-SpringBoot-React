@@ -124,22 +124,11 @@ public class QuoteRepository implements IQuoteRepository {
         return quoteR2dbcRepository.findById(id)
                 .map(quoteEntityMapper::toQuote)
                 .map(Optional::of)
-                .defaultIfEmpty(Optional.empty());
-    }
-
-
-    @Override
-    public Mono<Quote> saveQuote(Quote domainQuote) {
-        QuoteEntity entityToSave = quoteEntityMapper.toQuoteEntity(domainQuote);
-
-        return quoteR2dbcRepository.save(entityToSave)
-                .onErrorMap(ex -> {
-                    // Can throw DuplicateKeyException, due to unique constraint on text_author_hash
-                    logger.error("Error creating a quote: {}", ex.getMessage(), ex);
-
-                    return new QuotePersistenceException("Error saving quote: " + ex.getMessage(), ex);
-                })
-                .map(quoteEntityMapper::toQuote);
+                .defaultIfEmpty(Optional.empty())
+                .onErrorMap(ex -> !(ex instanceof QuotePersistenceException), ex -> { // Avoid double-wrapping
+                    logger.error("Error finding quote by id {}: {}", id, ex.getMessage(), ex);
+                    return new QuotePersistenceException("Error finding quote by id: " + ex.getMessage(), ex);
+                });
     }
 
 
@@ -197,7 +186,7 @@ public class QuoteRepository implements IQuoteRepository {
             return Mono.error(new IllegalArgumentException("Amount cannot be 0"));
         }
 
-        String randomQuoteSql = "SELECT id, author, text, likes FROM quotes ORDER BY RANDOM() LIMIT :amount";
+        String randomQuoteSql = "SELECT id, author, text, likes, text_author_hash, provider FROM quotes ORDER BY RANDOM() LIMIT :amount";
 
         return this.databaseClient.sql(randomQuoteSql)
                 .bind("amount", amount)
@@ -216,7 +205,11 @@ public class QuoteRepository implements IQuoteRepository {
      * Used mainly to get
      */
     public Flux<Quote> findAllQuotes(int limit) {
-        String sql = "SELECT id, author, text, likes FROM quotes ORDER BY id LIMIT :limit";
+        if (limit <= 0) {
+            return Flux.error(new IllegalArgumentException("Limit cannot be 0"));
+        }
+
+        String sql = "SELECT id, author, text, likes, text_author_hash, provider FROM quotes ORDER BY id LIMIT :limit";
 
         return this.databaseClient.sql(sql)
                 .bind("limit", limit)

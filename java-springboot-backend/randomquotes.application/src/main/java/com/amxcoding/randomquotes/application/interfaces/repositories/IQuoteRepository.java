@@ -11,7 +11,6 @@ public interface IQuoteRepository {
     Mono<Void> bulkInsertQuotesIgnoreConflicts(List<Quote> quotes, String providerName);
     Mono<Optional<Quote>> findByTextAuthorHash(String textAuthorHash);
     Mono<Optional<Quote>> findById(Long id);
-    Mono<Quote> saveQuote(Quote domainQuote);
     Mono<Boolean> incrementLikeCount(Long id);
     Mono<Boolean> decrementLikeCount(Long id);
     Mono<Long> count();
