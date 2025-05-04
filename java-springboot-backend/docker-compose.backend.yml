@@ -1,0 +1,103 @@
+services:
+  db:
+    image: postgres:alpine
+    container_name: postgres_dev
+    environment:
+      POSTGRES_DB: randomquotesdb
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust # Testing (Insecure!)
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432" # Map host port 5433 to container internal port 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # --- HEALTHCHECK to wait for the database to be ready ---
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d randomquotesdb" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  flyway:
+    image: flyway/flyway:11-alpine
+    container_name: flyway_dev
+    depends_on:
+      db:
+        condition: service_healthy # Wait until the 'db' service reports healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/randomquotesdb
+      FLYWAY_USER: postgres
+      # FLYWAY_PASSWORD: # Testing (Insecure!)
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    volumes:
+      - ../db/migration:/flyway/sql
+    command: -connectRetries=10 migrate
+
+  backend:
+    build:
+      context: ../
+      target: backend-runtime
+      dockerfile: java-springboot-backend/Dockerfile
+    container_name: api_dev
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+    environment:
+      # --- Override application.properties for Docker ---
+      SPRING_PROFILES_ACTIVE: dev
+
+      # --- R2DBC Connection ---
+      # Use service name 'db' and internal port '5432'
+      SPRING_R2DBC_URL: r2dbc:pool:postgresql://db:5432/randomquotesdb
+      SPRING_R2DBC_USERNAME: postgres
+      # SPRING_R2DBC_PASSWORD:
+
+      # --- JDBC Connection ---
+      # SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/randomquotesdb
+      # SPRING_DATASOURCE_USERNAME: postgres
+      # SPRING_DATASOURCE_PASSWORD:
+
+      # --- CORS Configuration Override ---
+      RANDOMQUOTES_CORS_METHODS: ${RANDOMQUOTES_CORS_METHODS:-POST,DELETE,GET,OPTIONS}
+      RANDOMQUOTES_CORS_ORIGINS: ${RANDOMQUOTES_CORS_ORIGINS:-http://localhost:5000}
+
+      # --- Cookie settings ---
+      APP_COOKIE_SECURE: ${APP_COOKIE_SECURE:-false}
+
+      # --- Swagger/OpenAPI ---
+      SPRINGDOC_API_DOCS_ENABLED: ${SPRINGDOC_API_DOCS_ENABLED:-true}
+      SPRINGDOC_SWAGGER_UI_ENABLED: ${SPRINGDOC_SWAGGER_UI_ENABLED:-true}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # SPRINGDOC_API_DOCS_PATH: ${SPRINGDOC_API_DOCS_PATH:-/v3/api-docs}
+      # SPRINGDOC_SWAGGER_UI_PATH: ${SPRINGDOC_SWAGGER_UI_PATH:-/swagger-ui.html}
+      # SPRINGDOC_SWAGGER_UI_URL: ${SPRINGDOC_SWAGGER_UI_URL:-/v3/api-docs}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ../
+      dockerfile: java-springboot-backend/Dockerfile
+      target: backend-nginx
+      args:
+        - NDIR=nginx
+    container_name: nginx
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy 
+    ports:
+      # Map host port 8080 to Nginx container's internal port 80
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+
