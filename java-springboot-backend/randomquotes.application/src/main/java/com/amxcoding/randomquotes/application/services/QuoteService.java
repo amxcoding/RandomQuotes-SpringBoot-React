@@ -37,6 +37,11 @@ public class QuoteService implements IQuoteService {
                         int randomIndex = ThreadLocalRandom.current().nextInt(cachedQuotes.size());
                         Quote cachedRandomQuote = cachedQuotes.get(randomIndex);
 
+                        // we have hit the threshold the result is from the database
+                        if (cachedRandomQuote.getId() != null) {
+                            return Mono.just(Optional.of(cachedRandomQuote));
+                        }
+
                         // use the hash to get the quote from db
                         // needed to show correct likes if the quote was added already before
                         String quoteHash = cachedRandomQuote.generateTextAuthorHash();
@@ -49,20 +54,17 @@ public class QuoteService implements IQuoteService {
                         }
 
                         return quoteRepository.findByTextAuthorHash(quoteHash);
-
                     } else {
                         return Mono.just(Optional.empty());
                     }
                 });
     }
 
-
     @Override
     public Mono<Optional<Quote>> getQuoteById(Long quoteId) {
         // Error handled by global error handler
         return quoteRepository.findById(quoteId);
     }
-
 
     @Override
     public Mono<Quote> updateQuote(Quote quote) {

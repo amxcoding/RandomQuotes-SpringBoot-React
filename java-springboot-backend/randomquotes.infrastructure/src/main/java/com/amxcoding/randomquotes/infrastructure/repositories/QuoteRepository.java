@@ -4,8 +4,10 @@ import com.amxcoding.randomquotes.application.exceptions.repositories.QuotePersi
 import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteRepository;
 import com.amxcoding.randomquotes.domain.entities.Quote;
 import com.amxcoding.randomquotes.infrastructure.persistence.mappers.QuoteEntityMapper;
-import com.amxcoding.randomquotes.infrastructure.persistence.models.QuoteEntity;
+import com.amxcoding.randomquotes.infrastructure.persistence.models.ZenQuoteEntity;
 import com.amxcoding.randomquotes.infrastructure.persistence.r2dbcs.IQuoteR2dbcRepository;
+import io.r2dbc.spi.Row;
+import io.r2dbc.spi.RowMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.r2dbc.core.DatabaseClient;
@@ -13,10 +15,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.BiFunction;
 
 @Repository
 public class QuoteRepository implements IQuoteRepository {
@@ -42,7 +42,7 @@ public class QuoteRepository implements IQuoteRepository {
             return Mono.empty();
         }
 
-        List<QuoteEntity> quoteEntities =  quotes.stream()
+        List<ZenQuoteEntity> quoteEntities =  quotes.stream()
                 .map(quoteEntityMapper::toQuoteEntity)
                 .toList();
         if (quoteEntities.isEmpty()) return Mono.empty();
@@ -51,7 +51,7 @@ public class QuoteRepository implements IQuoteRepository {
         Map<String, Object> bindings = new HashMap<>();
 
         for (int i = 0; i < quoteEntities.size(); i++) {
-            QuoteEntity q = quoteEntities.get(i);
+            ZenQuoteEntity q = quoteEntities.get(i);
 
             if (i > 0) sql.append(", ");
 
@@ -112,7 +112,7 @@ public class QuoteRepository implements IQuoteRepository {
 
     @Override
     public Mono<Quote> saveQuote(Quote domainQuote) {
-        QuoteEntity entityToSave = quoteEntityMapper.toQuoteEntity(domainQuote);
+        ZenQuoteEntity entityToSave = quoteEntityMapper.toQuoteEntity(domainQuote);
 
         return quoteR2dbcRepository.save(entityToSave)
                 .onErrorMap(ex -> {
@@ -147,6 +147,47 @@ public class QuoteRepository implements IQuoteRepository {
     }
 
 
+    @Override
+    public Mono<Long> count() {
+        return quoteR2dbcRepository.count()
+                .onErrorMap(ex -> {
+                    logger.error("Error counting quotes in repository: {}", ex.getMessage(), ex);
+                    return new QuotePersistenceException("Database error counting quotes", ex);
+                });
+    }
+
+    @Override
+    public Mono<Optional<List<Quote>>> findRandomQuotes(int amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("0 is not allowed!");
+        }
+
+        String randomQuoteSql = "SELECT id, author, text, likes FROM quotes ORDER BY RANDOM() LIMIT :amount";
+
+        return this.databaseClient.sql(randomQuoteSql)
+                .bind("amount", amount)
+                .map(QUOTE_ENTITY_MAPPING)
+                .all()
+                .map(quoteEntityMapper::toQuote)
+                .collectList()
+                .map(Optional::of)
+                .onErrorMap(ex -> {
+                    // Log the error and wrap it in a domain-specific exception
+                    logger.error("Error fetching {} random quotes: {}", amount, ex.getMessage(), ex);
+                    return new QuotePersistenceException(String.format("Database error fetching %d random quotes", amount), ex);
+                });
+    }
+
+    private static final BiFunction<Row, RowMetadata, ZenQuoteEntity> QUOTE_ENTITY_MAPPING = (row, rowMetadata) -> {
+        ZenQuoteEntity entity = new ZenQuoteEntity(); // Or use constructor if available
+        entity.setId(row.get("id", Long.class));
+        entity.setAuthor(row.get("author", String.class));
+        entity.setText(row.get("text", String.class));
+        entity.setLikes(Optional.ofNullable(row.get("likes", Integer.class)).orElse(0));
+        return entity;
+    };
+
+
     private Mono<Boolean> executeCounterUpdate(String sql, Long quoteId, String operationDescription) {
         return this.databaseClient.sql(sql)
                 .bind("quoteId", quoteId)
@@ -158,5 +199,4 @@ public class QuoteRepository implements IQuoteRepository {
                     return new QuotePersistenceException(String.format("Failed to %s like count for quote %d: ", operationDescription, quoteId) + ex.getMessage(), ex);
                 });
     }
-
 }

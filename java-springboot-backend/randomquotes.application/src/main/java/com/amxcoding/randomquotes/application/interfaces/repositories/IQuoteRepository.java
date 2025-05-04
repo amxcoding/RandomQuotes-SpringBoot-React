@@ -14,4 +14,6 @@ public interface IQuoteRepository {
     Mono<Quote> saveQuote(Quote domainQuote);
     Mono<Boolean> incrementLikeCount(Long id);
     Mono<Boolean> decrementLikeCount(Long id);
+    Mono<Long> count();
+    Mono<Optional<List<Quote>>>findRandomQuotes(int amount);
 }

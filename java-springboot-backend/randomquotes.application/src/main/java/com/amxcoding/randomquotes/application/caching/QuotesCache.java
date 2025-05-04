@@ -8,6 +8,8 @@ import com.amxcoding.randomquotes.domain.entities.Quote;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -18,43 +20,74 @@ import java.util.Optional;
 @Component
 public class QuotesCache implements IQuotesCache {
 
+    private final int QUOTE_FETCH_THRESHOLD =  3237;
     private final IQuoteProvider quoteProvider;
     private final IQuoteRepository quoteRepository;
+    private final Cache quotesCacheInstance;
     private static final Logger logger = LoggerFactory.getLogger(QuotesCache.class);
 
     public QuotesCache(@Qualifier("zenquotes") IQuoteProvider quoteProvider,
-                       IQuoteRepository quoteRepository) {
+                       IQuoteRepository quoteRepository,
+                       CacheManager cacheManager) {
         this.quoteProvider = quoteProvider;
         this.quoteRepository = quoteRepository;
+        this.quotesCacheInstance = cacheManager.getCache(Constants.Cache.QUOTES_CACHE);
+        if (this.quotesCacheInstance == null) {
+            logger.error("Cache '{}' not found!", Constants.Cache.QUOTES_CACHE);
+            throw new IllegalStateException("Required cache not configured: " + Constants.Cache.QUOTES_CACHE);
+        }
     }
 
-
     /**
-     * Fetches quotes, attempts to persist them ignoring conflicts,
-     * and returns the fetched quotes. The result is cached.
-     * Persistence only happens on cache miss when quotes are actually fetched.
+     * Gets quotes, first checking the cache. On miss, checks local DB count.
+     * If DB count >= threshold, fetches random quotes LOCALLY and caches/returns them.
+     * If DB count < threshold, fetches from the external provider, persists new ones,
+     * caches/returns the fetched quotes.
      *
-     * @return Mono emitting an Optional containing the list of fetched quotes, or empty Optional.
+     * @return
      */
     @Override
-    @Cacheable(value = Constants.Cache.QUOTES_CACHE, key = "'" + Constants.Cache.RANDOM_QUOTES_KEY + "'")
+    @SuppressWarnings("unchecked")
     public Mono<Optional<List<Quote>>> getQuotes() {
-        return quoteProvider.fetchQuotes()
-                .flatMap(optionalQuotes -> {
-                    // Check if the Optional contains a non-empty list of quotes
-                    if (optionalQuotes.isPresent() && !optionalQuotes.get().isEmpty()) {
-                        List<Quote> fetchedQuotes = optionalQuotes.get();
+        final String cacheKey = Constants.Cache.RANDOM_QUOTES_KEY;
 
-                        // Perform the bulk insert. After it completes (.then), return the original fetched quotes.
-                        return quoteRepository.bulkInsertQuotesIgnoreConflicts(fetchedQuotes)
-                                .doOnError(err -> logger.error("Error during bulk insert attempt after fetching quotes.", err))
-                                .then(Mono.just(optionalQuotes));
+        return Mono.fromCallable(() -> Optional.ofNullable(quotesCacheInstance.get(cacheKey, Optional.class)))
+                .flatMap(Mono::justOrEmpty)
+                .map(rawOptional -> (Optional<List<Quote>>) rawOptional)
+                .doOnNext(cachedResult -> logger.debug("Cache hit for key '{}'", cacheKey))
+                .switchIfEmpty(Mono.defer(() -> quoteRepository.count()
+                                .flatMap(currentCount -> {
+                                    // get from database
+                                    if (currentCount >= QUOTE_FETCH_THRESHOLD) {
+                                        logger.info("Quote threshold ({}) reached ({} found). Fetching random quotes from local DB.", QUOTE_FETCH_THRESHOLD, currentCount);
+                                        return quoteRepository.findRandomQuotes(50);
+                                    } else {
+                                        // get from url
+                                        logger.info("Quote threshold ({}) not reached ({} found). Fetching from provider.", QUOTE_FETCH_THRESHOLD, currentCount);
+                                        return quoteProvider.fetchQuotes()
+                                                .flatMap(optionalQuotes -> {
+                                                    if (optionalQuotes.isPresent() && !optionalQuotes.get().isEmpty()) {
+                                                        List<Quote> fetchedQuotes = optionalQuotes.get();
 
-                    } else {
-                        // If fetch returned empty Optional or empty List, do nothing and return it.
-                        return Mono.just(optionalQuotes);
-                    }
-                })
+                                                        return quoteRepository.bulkInsertQuotesIgnoreConflicts(fetchedQuotes)
+                                                                .thenReturn(optionalQuotes);
+                                                    } else {
+                                                        logger.debug("Provider returned no quotes or an empty Optional.");
+                                                        return Mono.just(optionalQuotes);
+                                                    }
+                                                });
+                                    }
+                                })
+                                // Cache the result
+                                .doOnNext(resultToCache -> {
+                                    // Check if the Optional is present AND the List inside it is not empty
+                                    if (resultToCache.isPresent() && !resultToCache.get().isEmpty()) {
+                                        quotesCacheInstance.put(cacheKey, resultToCache);
+                                    } else {
+                                        logger.debug("Result is empty (Optional.empty or contains empty list). Skipping cache for key '{}'.", cacheKey);
+                                    }
+                                }))
+                )
                 .doOnError(error -> logger.error("Error occurred in the getQuotes reactive chain: ", error));
     }
 }

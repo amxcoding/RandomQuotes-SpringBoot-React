@@ -4,7 +4,7 @@ package com.amxcoding.randomquotes.infrastructure.repositories;
 import com.amxcoding.randomquotes.application.exceptions.repositories.QuotePersistenceException;
 import com.amxcoding.randomquotes.domain.entities.Quote;
 import com.amxcoding.randomquotes.infrastructure.persistence.mappers.QuoteEntityMapper;
-import com.amxcoding.randomquotes.infrastructure.persistence.models.QuoteEntity;
+import com.amxcoding.randomquotes.infrastructure.persistence.models.ZenQuoteEntity;
 import com.amxcoding.randomquotes.infrastructure.persistence.r2dbcs.IQuoteR2dbcRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,8 +50,8 @@ class QuoteRepositoryUnitTest {
     // Common test data
     private Quote domainQuote1;
     private Quote domainQuote2;
-    private QuoteEntity entityQuote1;
-    private QuoteEntity entityQuote2;
+    private ZenQuoteEntity entityQuote1;
+    private ZenQuoteEntity entityQuote2;
     private String hash1;
     private String hash2;
 
@@ -64,8 +64,8 @@ class QuoteRepositoryUnitTest {
         hash1 = domainQuote1.generateTextAuthorHash();
         hash2 = domainQuote2.generateTextAuthorHash();
 
-        entityQuote1 = new QuoteEntity(1L, "Author One", " Text One ", 5, hash1);
-        entityQuote2 = new QuoteEntity(2L, "author two", "text two", 0, hash2);
+        entityQuote1 = new ZenQuoteEntity(1L, "Author One", " Text One ", 5, hash1);
+        entityQuote2 = new ZenQuoteEntity(2L, "author two", "text two", 0, hash2);
     }
 
     // --- Tests for bulkInsertQuotesIgnoreConflicts ---
@@ -297,9 +297,9 @@ class QuoteRepositoryUnitTest {
             Quote newDomainQuote = new Quote(null, "New Author", "New Text", 0); // Domain object without ID or explicit hash
             String expectedHash = newDomainQuote.generateTextAuthorHash();
             // Entity that the mapper *should* create (with hash)
-            QuoteEntity entityToSave = new QuoteEntity(null, "New Author", "New Text", 0, expectedHash);
+            ZenQuoteEntity entityToSave = new ZenQuoteEntity(null, "New Author", "New Text", 0, expectedHash);
             // Entity returned by the repo after save (with ID and hash)
-            QuoteEntity savedEntity = new QuoteEntity(100L, "New Author", "New Text", 0, expectedHash);
+            ZenQuoteEntity savedEntity = new ZenQuoteEntity(100L, "New Author", "New Text", 0, expectedHash);
             // Domain object mapped back
             Quote savedDomain = new Quote(100L, "New Author", "New Text", 0);
 
@@ -326,7 +326,7 @@ class QuoteRepositoryUnitTest {
             // Arrange
             Quote newQuote = new Quote(null, "Duplicate Author", "Duplicate Text", 0);
             String expectedHash = newQuote.generateTextAuthorHash();
-            QuoteEntity entityToSave = new QuoteEntity(null, "Duplicate Author", "Duplicate Text", 0, expectedHash);
+            ZenQuoteEntity entityToSave = new ZenQuoteEntity(null, "Duplicate Author", "Duplicate Text", 0, expectedHash);
             DuplicateKeyException dbError = new DuplicateKeyException("Duplicate key error on text_author_hash");
 
             when(quoteEntityMapper.toQuoteEntity(newQuote)).thenReturn(entityToSave);
@@ -345,7 +345,7 @@ class QuoteRepositoryUnitTest {
                     .verify();
             verify(quoteEntityMapper).toQuoteEntity(newQuote);
             verify(quoteR2dbcRepository).save(entityToSave);
-            verify(quoteEntityMapper, never()).toQuote(any(QuoteEntity.class));
+            verify(quoteEntityMapper, never()).toQuote(any(ZenQuoteEntity.class));
         }
     }
 

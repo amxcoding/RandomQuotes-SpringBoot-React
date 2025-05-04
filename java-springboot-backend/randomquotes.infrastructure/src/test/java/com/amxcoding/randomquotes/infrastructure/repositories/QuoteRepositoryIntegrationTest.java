@@ -3,7 +3,7 @@ package com.amxcoding.randomquotes.infrastructure.repositories;
 import com.amxcoding.randomquotes.application.exceptions.repositories.QuotePersistenceException;
 import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteRepository;
 import com.amxcoding.randomquotes.domain.entities.Quote;
-import com.amxcoding.randomquotes.infrastructure.persistence.models.QuoteEntity;
+import com.amxcoding.randomquotes.infrastructure.persistence.models.ZenQuoteEntity;
 import io.r2dbc.spi.ConnectionFactory;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,10 +59,10 @@ class QuoteRepositoryIntegrationTest {
     }
 
     // --- Helper Methods ---
-    private Mono<QuoteEntity> findEntityById(Long id) {
+    private Mono<ZenQuoteEntity> findEntityById(Long id) {
         return entityTemplate.selectOne(
                 query(where("id").is(id)),
-                QuoteEntity.class
+                ZenQuoteEntity.class
         );
     }
 

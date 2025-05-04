@@ -7,7 +7,7 @@ import org.springframework.data.relational.core.mapping.Table;
 import java.util.Objects;
 
 @Table(name = "quotes")
-public class QuoteEntity {
+public class ZenQuoteEntity {
 
     @Id
     @Column("id")
@@ -25,16 +25,16 @@ public class QuoteEntity {
     @Column("text_author_hash")
     private String textAuthorHash;
 
-    public QuoteEntity() {
+    public ZenQuoteEntity() {
     }
 
-    public QuoteEntity(String author, String text, int likes) {
+    public ZenQuoteEntity(String author, String text, int likes) {
         this.author = author;
         this.text = text;
         this.likes = likes;
     }
 
-    public QuoteEntity(Long id, String author, String text, int likes, String textAuthorHash) {
+    public ZenQuoteEntity(Long id, String author, String text, int likes, String textAuthorHash) {
         this.id = id;
         this.author = author;
         this.text = text;
@@ -66,7 +66,7 @@ public class QuoteEntity {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        QuoteEntity that = (QuoteEntity) o;
+        ZenQuoteEntity that = (ZenQuoteEntity) o;
         return Objects.equals(textAuthorHash, that.textAuthorHash);
     }
 
