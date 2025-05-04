@@ -4,7 +4,7 @@ import com.amxcoding.randomquotes.application.exceptions.repositories.QuotePersi
 import com.amxcoding.randomquotes.application.interfaces.repositories.IQuoteRepository;
 import com.amxcoding.randomquotes.domain.entities.Quote;
 import com.amxcoding.randomquotes.infrastructure.persistence.mappers.QuoteEntityMapper;
-import com.amxcoding.randomquotes.infrastructure.persistence.models.ZenQuoteEntity;
+import com.amxcoding.randomquotes.infrastructure.persistence.models.QuoteEntity;
 import com.amxcoding.randomquotes.infrastructure.persistence.r2dbcs.IQuoteR2dbcRepository;
 import io.r2dbc.spi.Row;
 import io.r2dbc.spi.RowMetadata;
@@ -42,7 +42,7 @@ public class QuoteRepository implements IQuoteRepository {
             return Mono.empty();
         }
 
-        List<ZenQuoteEntity> quoteEntities =  quotes.stream()
+        List<QuoteEntity> quoteEntities =  quotes.stream()
                 .map(quoteEntityMapper::toQuoteEntity)
                 .toList();
         if (quoteEntities.isEmpty()) return Mono.empty();
@@ -51,7 +51,7 @@ public class QuoteRepository implements IQuoteRepository {
         Map<String, Object> bindings = new HashMap<>();
 
         for (int i = 0; i < quoteEntities.size(); i++) {
-            ZenQuoteEntity q = quoteEntities.get(i);
+            QuoteEntity q = quoteEntities.get(i);
 
             if (i > 0) sql.append(", ");
 
@@ -112,7 +112,7 @@ public class QuoteRepository implements IQuoteRepository {
 
     @Override
     public Mono<Quote> saveQuote(Quote domainQuote) {
-        ZenQuoteEntity entityToSave = quoteEntityMapper.toQuoteEntity(domainQuote);
+        QuoteEntity entityToSave = quoteEntityMapper.toQuoteEntity(domainQuote);
 
         return quoteR2dbcRepository.save(entityToSave)
                 .onErrorMap(ex -> {
@@ -178,8 +178,8 @@ public class QuoteRepository implements IQuoteRepository {
                 });
     }
 
-    private static final BiFunction<Row, RowMetadata, ZenQuoteEntity> QUOTE_ENTITY_MAPPING = (row, rowMetadata) -> {
-        ZenQuoteEntity entity = new ZenQuoteEntity(); // Or use constructor if available
+    private static final BiFunction<Row, RowMetadata, QuoteEntity> QUOTE_ENTITY_MAPPING = (row, rowMetadata) -> {
+        QuoteEntity entity = new QuoteEntity(); // Or use constructor if available
         entity.setId(row.get("id", Long.class));
         entity.setAuthor(row.get("author", String.class));
         entity.setText(row.get("text", String.class));
