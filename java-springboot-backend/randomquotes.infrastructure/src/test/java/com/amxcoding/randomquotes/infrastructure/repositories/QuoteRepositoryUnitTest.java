@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("QuoteRepositoryUnitTests")
 class QuoteRepositoryUnitTest {
 
     @Mock
@@ -118,7 +119,7 @@ class QuoteRepositoryUnitTest {
             assertThat(sqlCaptor.getValue()).startsWith("INSERT INTO quotes (author, text, likes, text_author_hash, provider) VALUES");
             assertThat(sqlCaptor.getValue()).contains("(:author0, :text0, :likes0, :hash0, :provider0)");
             assertThat(sqlCaptor.getValue()).contains("(:author1, :text1, :likes1, :hash1, :provider1)");
-            assertThat(sqlCaptor.getValue()).endsWith("ON CONFLICT (text_author_hash) DO NOTHING");
+            assertThat(sqlCaptor.getValue()).endsWith("ON CONFLICT (text_author_hash, provider) DO NOTHING");
 
             // Verify all parameters were bound correctly (5 per quote * 2 quotes = 10 bindings)
             verify(mockGenericExecuteSpec, times(10)).bind(anyString(), any());
@@ -273,7 +274,7 @@ class QuoteRepositoryUnitTest {
                     .expectNext(Optional.empty())
                     .verifyComplete();
             verify(quoteR2dbcRepository).findById(nonExistentId);
-            verifyNoInteractions(quoteEntityMapper); // Mapper not called
+            verifyNoInteractions(quoteEntityMapper);
         }
 
         @Test
@@ -297,7 +298,7 @@ class QuoteRepositoryUnitTest {
                     })
                     .verify();
             verify(quoteR2dbcRepository).findById(quoteId);
-            verifyNoInteractions(quoteEntityMapper); // Mapper not called on error
+            verifyNoInteractions(quoteEntityMapper);
         }
     }
 

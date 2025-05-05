@@ -28,7 +28,7 @@ import static org.springframework.data.relational.core.query.Query.query;
 @Import(QuoteRepository.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.DisplayName.class)
-@DisplayName("QuoteRepository Integration Tests (H2)")
+@DisplayName("QuoteRepositoryIntegrationTests (H2)")
 class QuoteRepositoryIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(QuoteRepositoryIntegrationTest.class);
@@ -42,7 +42,7 @@ class QuoteRepositoryIntegrationTest {
 
     private final Quote quote1Input = new Quote("Integration Author 1", "Integration Text 1");
     private final Quote quote2Input = new Quote("Integration Author 2", "Integration Text 2");
-    private final Quote quote1DuplicateInput = new Quote("Integration Author 1", "Integration Text 1"); // Same content as quote1
+    private final Quote quote1DuplicateInput = new Quote("Integration Author 1", "Integration Text 1");
     private final String testProvider = "test-suite";
 
     // Enable H2 PostgreSQL compatibility mode for ON CONFLICT syntax support
@@ -267,7 +267,7 @@ class QuoteRepositoryIntegrationTest {
         // --- IMPORTANT NOTE ---
         // The following tests verify the behavior of 'ON CONFLICT ... DO NOTHING'.
         // This specific SQL syntax is NOT fully supported by H2 database even in
-        // PostgreSQL compatibility mode (as seen with H2 v2.3.232).
+        // PostgreSQL compatibility mode
         // These tests are DISABLED when running against H2 and should ideally be
         // executed against a real PostgreSQL instance (e.g., using Testcontainers)
         // to ensure correctness.
@@ -286,7 +286,7 @@ class QuoteRepositoryIntegrationTest {
             // Assert: Verify the operation completes without error and check the database state.
             StepVerifier.create(resultMono)
                     .as("Verify bulk insert completes successfully")
-                    .verifyComplete(); // Fails on H2 due to SQL syntax
+                    .verifyComplete();
 
             // Verify count using DB helper
             StepVerifier.create(countQuotesInDb())
@@ -321,7 +321,7 @@ class QuoteRepositoryIntegrationTest {
             // Assert: Verify completion and that only the new quote was added.
             StepVerifier.create(resultMono)
                     .as("Verify bulk insert completes successfully")
-                    .verifyComplete(); // Fails on H2 due to SQL syntax
+                    .verifyComplete();
 
             // Verify total count is 2 (original quote1 + new quote2; duplicate quote1 was ignored)
             StepVerifier.create(countQuotesInDb())
@@ -381,7 +381,7 @@ class QuoteRepositoryIntegrationTest {
             // Assert: Verify the operation completes and the database count remains unchanged.
             StepVerifier.create(resultMono)
                     .as("Verify bulk insert completes successfully for all duplicates")
-                    .verifyComplete(); // Fails on H2 due to SQL syntax
+                    .verifyComplete();
 
             // Count should still be 2, as all attempted inserts were ignored due to conflict.
             StepVerifier.create(countQuotesInDb())
@@ -444,21 +444,21 @@ class QuoteRepositoryIntegrationTest {
             // Act & Assert (Increment 1)
             Mono<Boolean> inc1Result = quoteRepository.incrementLikeCount(id);
             StepVerifier.create(inc1Result).expectNext(true).verifyComplete();
-            StepVerifier.create(findEntityById(id)) // Verify state
+            StepVerifier.create(findEntityById(id))
                     .assertNext(entity -> assertThat(entity.getLikes()).isEqualTo(1))
                     .verifyComplete();
 
             // Act & Assert (Increment 2)
             Mono<Boolean> inc2Result = quoteRepository.incrementLikeCount(id);
             StepVerifier.create(inc2Result).expectNext(true).verifyComplete();
-            StepVerifier.create(findEntityById(id)) // Verify state
+            StepVerifier.create(findEntityById(id))
                     .assertNext(entity -> assertThat(entity.getLikes()).isEqualTo(2))
                     .verifyComplete();
 
             // Act & Assert (Increment 3)
             Mono<Boolean> inc3Result = quoteRepository.incrementLikeCount(id);
             StepVerifier.create(inc3Result).expectNext(true).verifyComplete();
-            StepVerifier.create(findEntityById(id)) // Verify state
+            StepVerifier.create(findEntityById(id))
                     .assertNext(entity -> assertThat(entity.getLikes()).isEqualTo(3))
                     .verifyComplete();
         }
@@ -604,8 +604,6 @@ class QuoteRepositoryIntegrationTest {
         @DisplayName("2. Should return all quotes if limit exceeds available count")
         void findAllQuotes_whenLimitExceedsCount_shouldReturnAll() {
             // Arrange: Insert fewer quotes (2) into the clean database than the limit we will request (5).
-            // We use the insertAndRetrieve helper which ensures quotes are persisted with IDs.
-            // block() is acceptable in Arrange phase for test setup.
             String provider = testProvider + "-findAllLimit";
             Quote quoteA = insertAndRetrieve(new Quote("Author Lim A", "Text Lim A"), provider).block();
             Quote quoteB = insertAndRetrieve(new Quote("Author Lim B", "Text Lim B"), provider).block();
@@ -614,13 +612,9 @@ class QuoteRepositoryIntegrationTest {
             int highLimit = 5; // Define a limit greater than the number of available quotes (2)
 
             // Act: Execute the repository method under test with the high limit.
-            // Assumes the SQL in QuoteRepository.findAllQuotes selects all necessary columns
-            // for QUOTE_ENTITY_MAPPING to succeed.
             Flux<Quote> resultFlux = quoteRepository.findAllQuotes(highLimit);
 
             // Assert: Verify that the resulting Flux contains exactly the 2 quotes
-            // that were inserted, in the correct order (by ID), and then completes.
-            // StepVerifier handles the subscription and verification.
             StepVerifier.create(resultFlux)
                     .assertNext(quote -> { // Check first emitted quote matches quoteA
                         assertThat(quote.getId()).isEqualTo(quoteA.getId());
@@ -639,7 +633,7 @@ class QuoteRepositoryIntegrationTest {
         @Test
         @DisplayName("3. Should return empty Flux when no quotes exist")
         void findAllQuotes_whenDbEmpty_shouldReturnEmptyFlux() {
-            // Arrange: Database is empty (ensured by @BeforeEach)
+            // Arrange
             int limit = 5;
 
             // Act: Call findAllQuotes
@@ -743,7 +737,7 @@ class QuoteRepositoryIntegrationTest {
 
             // Assert: Verify the result is an Optional containing an empty list
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(List.of())) // Check for Optional<EmptyList>
+                    .expectNext(Optional.of(List.of()))
                     .verifyComplete();
         }
 

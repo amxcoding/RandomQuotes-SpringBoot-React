@@ -23,7 +23,7 @@ public class CacheConfig {
         // quotesCache
         cacheManager
                 .setCaffeine(Caffeine.newBuilder()
-                        .expireAfterWrite(1, TimeUnit.MINUTES) // testing
+                        .expireAfterWrite(3, TimeUnit.MINUTES)
                         .maximumSize(50)
                         .recordStats()
                 );

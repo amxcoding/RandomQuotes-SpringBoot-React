@@ -52,7 +52,7 @@ public class GlobalWebFluxExceptionHandler implements ErrorWebExceptionHandler {
         String requestUri = exchange.getRequest().getURI().toString();
 
         if (throwable instanceof ApiException apiException) {
-            status = apiException.getStatus(); // Use status from ApiException
+            status = apiException.getStatus();
             String detailString = apiException.getDetails() != null && !apiException.getDetails().isEmpty()
                     ? String.join(", ", apiException.getDetails())
                     : "";
@@ -70,10 +70,9 @@ public class GlobalWebFluxExceptionHandler implements ErrorWebExceptionHandler {
         } else {
             // Catch-all for generic Exception
             errorResponse = new ErrorResponse(status.value(), DEFAULT_ERROR_MESSAGE, "");
-            logger.error("InternalError", "Unexpected error for request '{}': {}", requestUri, throwable.getMessage(), throwable); // Log full exception
+            logger.error("InternalError", "Unexpected error for request '{}': {}", requestUri, throwable.getMessage(), throwable);
         }
 
-        // Set Response Status and Body
         exchange.getResponse().setStatusCode(status);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
 

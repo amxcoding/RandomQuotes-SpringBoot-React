@@ -45,7 +45,7 @@ services:
       flyway:
         condition: service_completed_successfully
     environment:
-      # --- Override application.properties for Docker ---
+      # --- Override application.properties ---
       SPRING_PROFILES_ACTIVE: dev
 
       # --- R2DBC Connection ---
@@ -89,9 +89,6 @@ services:
       args:
         - NDIR=nginx
     container_name: nginx
-    # depends_on:
-    #   backend:
-    #     condition: service_healthy 
     ports:
       # Map host port 8080 to Nginx container's internal port 80
       - "8080:80"

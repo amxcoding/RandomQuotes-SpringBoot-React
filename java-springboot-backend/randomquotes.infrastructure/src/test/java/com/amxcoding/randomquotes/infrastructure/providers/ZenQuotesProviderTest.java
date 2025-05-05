@@ -51,13 +51,11 @@ class ZenQuotesProviderTest {
 
     private ZenQuotesProvider zenQuotesProvider;
 
-    // Test Data
     private ZenQuote zenQuote1;
     private ZenQuote zenQuote2;
     private Quote domainQuote1;
     private Quote domainQuote2;
 
-    // Constants
     private final String BASE_URL = "http://zenquotes.test"; // Dummy base URL for testing
     private final String PROVIDER_NAME = Constants.QuoteProviders.ZEN_QUOTES;
     private final long PROVIDER_THRESHOLD = 3237; // Match the constant in the class
@@ -220,10 +218,8 @@ class ZenQuotesProviderTest {
                     .expectErrorSatisfies(throwable -> {
                         // Check that the error is the expected wrapper type
                         assertThat(throwable)
-                                .as("Check error type is QuoteProviderException")
                                 .isInstanceOf(QuoteProviderException.class);
                         assertThat(throwable.getCause())
-                                .as("Check cause is the original persistence error")
                                 .isSameAs(persistError);
                     })
                     .verify();
@@ -408,7 +404,7 @@ class ZenQuotesProviderTest {
      * returning the mock ResponseSpec.
      * Call this in the Arrange block, then mock responseSpec.bodyToMono() as needed.
      */
-    @SuppressWarnings("unchecked") // Suppress warnings for generic types in mocks
+    @SuppressWarnings("unchecked")
     private void arrangeWebClientChainUpToRetrieve() {
         // Mock: webClient.get()
         when(webClient.get()).thenReturn(requestHeadersUriSpec);

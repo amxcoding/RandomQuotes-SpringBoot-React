@@ -151,7 +151,6 @@ class QuoteServiceTest {
             when(quotesCache.getQuotes()).thenReturn(Mono.just(Optional.of(Collections.emptyList())));
 
             // Act: Call the service method.
-            // --- FIX: Corrected return type ---
             Mono<Optional<Quote>> resultMono = quoteService.getRandomQuote();
 
             // Assert: Verify the service returns an empty Optional.

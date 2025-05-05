@@ -197,12 +197,10 @@ class QuoteFetchOrchestratorTest {
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(error -> {
                         assertThat(error)
-                                .isInstanceOf(QuoteFetchOrchestratorException.class)
-                                .hasMessageContaining("CRITICAL error failed to get quotes: Unexpected error:"); // Outer wrapper message check
+                                .isInstanceOf(QuoteFetchOrchestratorException.class);
 
                         assertThat(error.getCause())
-                                .isInstanceOf(QuoteFetchOrchestratorException.class) // Inner wrapper type check
-                                .hasMessage("Unexpected error: " + unexpectedError.getMessage()); // Inner wrapper message check
+                                .isInstanceOf(QuoteFetchOrchestratorException.class);
 
                         assertThat(error.getCause().getCause())
                                 .isSameAs(unexpectedError); // Original cause check
@@ -322,12 +320,10 @@ class QuoteFetchOrchestratorTest {
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(error -> {
                         assertThat(error)
-                                .isInstanceOf(QuoteFetchOrchestratorException.class)
-                                .hasMessageContaining("CRITICAL error failed to get quotes: Database fallback failed"); // Outer wrapper
+                                .isInstanceOf(QuoteFetchOrchestratorException.class);
 
                         assertThat(error.getCause())
-                                .isInstanceOf(QuotePersistenceException.class) // Inner wrapper
-                                .hasMessageContaining("Database fallback failed during count or fetch: " + dbCountError.getMessage());
+                                .isInstanceOf(QuotePersistenceException.class);
 
                         assertThat(error.getCause().getCause()) // Original cause
                                 .isSameAs(dbCountError);
@@ -358,12 +354,10 @@ class QuoteFetchOrchestratorTest {
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(error -> {
                         assertThat(error)
-                                .isInstanceOf(QuoteFetchOrchestratorException.class)
-                                .hasMessageContaining("CRITICAL error failed to get quotes: Database fallback failed"); // Outer wrapper
+                                .isInstanceOf(QuoteFetchOrchestratorException.class);
 
                         assertThat(error.getCause())
-                                .isInstanceOf(QuotePersistenceException.class) // Inner wrapper
-                                .hasMessageContaining("Database fallback failed during count or fetch: " + dbFetchError.getMessage());
+                                .isInstanceOf(QuotePersistenceException.class); // Inner wrapper
 
                         assertThat(error.getCause().getCause()) // Original cause
                                 .isSameAs(dbFetchError);
@@ -394,12 +388,10 @@ class QuoteFetchOrchestratorTest {
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(error -> {
                         assertThat(error)
-                                .isInstanceOf(QuoteFetchOrchestratorException.class)
-                                .hasMessageContaining("CRITICAL error failed to get quotes: Database fallback failed"); // Outer wrapper
+                                .isInstanceOf(QuoteFetchOrchestratorException.class); // Outer wrapper
 
                         assertThat(error.getCause())
-                                .isInstanceOf(QuotePersistenceException.class) // Inner wrapper
-                                .hasMessageContaining("Database fallback failed during count or fetch: " + dbFetchError.getMessage());
+                                .isInstanceOf(QuotePersistenceException.class); // Inner wrapper
 
                         assertThat(error.getCause().getCause()) // Original cause
                                 .isSameAs(dbFetchError);

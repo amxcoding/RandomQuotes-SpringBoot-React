@@ -79,9 +79,6 @@ class QuoteService {
   // /**
   //  * Establishes or updates the WebSocket connection for liked quotes.
   //  * Stores the callbacks to be used for message and error handling.
-  //  *
-  //  * @param onMessage - Function to call when a new LikedQuote message is received.
-  //  * @param onError - Optional function to call when a WebSocket error occurs.
   //  */
   // public connectToLikedQuotesStream(
   //   onMessage: (quote: QuoteData) => void,

@@ -27,6 +27,10 @@ public class QuoteService implements IQuoteService {
     }
 
 
+    /**
+     * Get random quote from a provider or the database
+     * If Id is null it was from a provider else from the database
+     */
     @Override
     public Mono<Optional<Quote>> getRandomQuote() {
         return quotesCache.getQuotes()

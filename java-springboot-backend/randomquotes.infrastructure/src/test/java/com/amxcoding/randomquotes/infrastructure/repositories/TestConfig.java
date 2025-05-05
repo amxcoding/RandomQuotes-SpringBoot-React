@@ -8,11 +8,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 
 
-/**
- * Minimal Spring configuration for testing
- * <p>
- * Loads autoconfiguration and scans necessary packages within the application layer.
- */
 @SpringBootConfiguration
 @EnableR2dbcRepositories(basePackages = "com.amxcoding.randomquotes.infrastructure.persistence.r2dbcs")
 //@ComponentScan(basePackages = "com.amxcoding.randomquotes.infrastructure.persistence.mappers")

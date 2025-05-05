@@ -83,7 +83,7 @@ public class QuoteRepository implements IQuoteRepository {
             bindings.put("provider" + i, providerName);
         }
 
-        sql.append(" ON CONFLICT (text_author_hash) DO NOTHING");
+        sql.append(" ON CONFLICT (text_author_hash, provider) DO NOTHING");
         DatabaseClient.GenericExecuteSpec spec = databaseClient.sql(sql.toString());
 
         for (Map.Entry<String, Object> entry : bindings.entrySet()) {
@@ -94,7 +94,7 @@ public class QuoteRepository implements IQuoteRepository {
                 .onErrorMap(ex -> {
                     String finalSql = sql.toString();
                     logger.error("Error during bulk quote insert from provider {}. Number of quotes: {}, SQL (snippet): [{}]",
-                            providerName, // Add provider name to log
+                            providerName,
                             quoteEntities.size(),
                             finalSql.substring(0, Math.min(finalSql.length(), 100)),
                             ex);
@@ -201,9 +201,7 @@ public class QuoteRepository implements IQuoteRepository {
                 });
     }
 
-    /**
-     * Used mainly to get
-     */
+    @Override
     public Flux<Quote> findAllQuotes(int limit) {
         if (limit <= 0) {
             return Flux.error(new IllegalArgumentException("Limit cannot be 0"));

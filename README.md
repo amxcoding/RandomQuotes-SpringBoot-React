@@ -1,4 +1,4 @@
-# 📚 Randomquotes - backend assignment (fullstack)
+# 📚 Randomquotes - backend assignment
 
 This is a full-stack web application that demonstrates a production-style quote service. It was built as part of a coding assignment to showcase software engineering skills across backend and frontend development, API integration, caching, reactive programming, and containerization.
 
@@ -31,8 +31,8 @@ The app fetches random inspirational quotes from external APIs and exposes them 
 - 🧪 **Content Negotiation**  
   Supports both JSON and XML responses depending on the `Accept` header.
 
-- 🔄 _(Planned)_ **Real-time Streaming**  
-  A live feed showing recently liked quotes, intended for future enhancement.
+<!-- - 🔄 _(Planned)_ **Real-time Streaming**
+  A live feed showing recently liked quotes, intended for future enhancement. -->
 
 ---
 
@@ -53,6 +53,32 @@ The app fetches random inspirational quotes from external APIs and exposes them 
 - Node.js & npm
 - Docker
 - PostgreSQL
+
+### Local setup
+
+#### Setup the database
+
+In the **project root folder**, run the following commands:
+
+```bash
+docker-compose -f java-springboot-backend/docker-compose.backend.yml up -d --build db flyway
+```
+
+#### Run frontend
+
+Open spa-react-frontend/randomquotes.spa in any supported IDE to run the frontend with:
+
+```bash
+# Install dependencies
+npm run install
+
+# Start the development server
+npm run dev
+```
+
+#### Run backend
+
+Open java-springboot-backend in any supported IDE and start the application to run the backend.
 
 ### Run with Docker Compose
 
@@ -85,7 +111,6 @@ This project was designed to simulate real-world production code with a focus on
 - Clean architecture and modularity
 - Resilience and fault tolerance
 - Modern asynchronous programming patterns
-- User-centric UX with anonymous personalization
 
 ---
 

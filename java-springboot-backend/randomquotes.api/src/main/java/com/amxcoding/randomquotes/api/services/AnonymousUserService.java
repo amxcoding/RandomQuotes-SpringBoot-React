@@ -30,7 +30,6 @@ public class AnonymousUserService implements IAnonymousUserService {
      */
     @Override
     public String getOrCreateAnonymousUserId(ServerHttpRequest request, ServerHttpResponse response) {
-        // Look for the user ID in the cookies
         String userId = null;
         if (request.getCookies().containsKey(USER_ID_COOKIE_NAME)) {
             HttpCookie cookie =  request.getCookies().getFirst(USER_ID_COOKIE_NAME);

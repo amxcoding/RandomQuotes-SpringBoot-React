@@ -94,7 +94,6 @@ public class QuoteFetchOrchestrator implements IQuoteFetchOrchestrator {
                 .flatMap(currentCount -> {
                     if (currentCount < FALLBACK_RANDOM_QUOTE_AMOUNT) {
                         // Less than target amount available, fetch all
-                        // Limit is threshold
                         return quoteRepository.findAllQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT)
                                 .collectList()
                                 .map(list -> list.isEmpty() ? Optional.<List<Quote>>empty() : Optional.of(list));

@@ -58,7 +58,7 @@ public class ZenQuotesProvider implements IQuoteProvider {
 
     /**
      * Checks local DB count for this provider. If threshold is met, returns empty Optional.
-     * Otherwise, fetches 50 quotes by default from zenquotes, persists them, and returns them.
+     * Otherwise, fetches 50 quotes by default from zenquotes, persists them, and return them.
      * Retries on transient errors (5xx, timeouts) with exponential backoff.
      * On final error, throws custom QuoteProviderException.
      */
