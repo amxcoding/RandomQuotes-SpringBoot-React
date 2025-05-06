@@ -1,6 +1,6 @@
 # 📚 Randomquotes - backend assignment
 
-This is a full-stack web application that demonstrates a production-style quote service. It was built as part of a coding assignment to showcase software engineering skills across backend and frontend development, API integration, caching, reactive programming, and containerization.
+This is a full-stack web application that demonstrates a production-style quote service. It was built as part of a coding assignment to showcase software engineering skills across backend and frontend development, API integration, caching, reactive programming, streams and containerization.
 
 The app fetches random inspirational quotes from external APIs and exposes them through a RESTful interface, with support for both JSON and XML responses. A modern React frontend displays the data to the user, and the application is packaged using Docker for seamless deployment.
 
