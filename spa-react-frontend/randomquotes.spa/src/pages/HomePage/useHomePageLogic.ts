@@ -108,7 +108,7 @@ export function useHomePageLogic() {
     setSSEError(null); // Reset stream error on new connection attempt
 
     const handleStreamMessage = (likedQuote: QuoteData) => {
-      console.log('Received quote via SSE for stream list:', likedQuote);
+      // console.log('Received quote via SSE for stream list:', likedQuote);
 
       const newStreamEntry: QuoteStreamData = {
         reactKey: generateUniqueReactKey(),
