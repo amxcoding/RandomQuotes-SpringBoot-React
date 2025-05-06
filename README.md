@@ -31,7 +31,7 @@ The app fetches random inspirational quotes from external APIs and exposes them 
 - 🧪 **Content Negotiation**  
   Supports both JSON and XML responses depending on the `Accept` header.
 
-- 🔄 **Real-time Streaming**
+- 🔄 **Real-time Streaming**  
   A live feed showing recently liked quotes.
 
 ---
