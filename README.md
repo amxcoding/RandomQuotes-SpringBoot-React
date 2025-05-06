@@ -4,7 +4,7 @@ This is a full-stack web application that demonstrates a production-style quote 
 
 The app fetches random inspirational quotes from external APIs and exposes them through a RESTful interface, with support for both JSON and XML responses. A modern React frontend displays the data to the user, and the application is packaged using Docker for seamless deployment.
 
-![RandomQuote](./assets/notsorandomquote.png)
+![RandomQuote](./assets/notsorandomquote2.png)
 
 ---
 
