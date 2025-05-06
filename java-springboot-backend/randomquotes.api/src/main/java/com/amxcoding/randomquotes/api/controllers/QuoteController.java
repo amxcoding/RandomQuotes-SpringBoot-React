@@ -56,7 +56,7 @@ public class QuoteController {
      * Likes the specified quote for the current anonymous user and returns the updated quote.
      * Also broadcast the liked quote
      */
-    @GetMapping(path = "/{id}/like", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    @PostMapping(path = "/{id}/like", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public Mono<ResponseEntity<QuoteResponse>> likeQuoteByHash(@PathVariable("id") Long id,
                                                                ServerHttpRequest request,
                                                                ServerHttpResponse response) {
