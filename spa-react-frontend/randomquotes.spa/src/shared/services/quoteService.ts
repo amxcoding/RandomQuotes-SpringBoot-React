@@ -6,9 +6,9 @@ import { QuoteData } from '../types/quoteData';
 
 class QuoteService {
   private readonly baseUrl = `${appSettings.apiBaseUrl}/quotes`;
-  // private websocket: WebSocket | null = null;
-  // private onMessageCallback: ((quote: QuoteData) => void) | null = null;
-  // private onErrorCallback: ((event: Event) => void) | null = null;
+  private eventSource: EventSource | null = null;
+  private onMessageCallback: ((quote: QuoteData) => void) | null = null;
+  private onErrorCallback: ((event: Event) => void) | null = null;
 
   public async fetchRandomQuote(): Promise<QuoteData> {
     const url = `${this.baseUrl}/random`;
@@ -76,95 +76,67 @@ class QuoteService {
     return this.sendQuoteLikeRequest('DELETE', quoteId);
   }
 
-  // /**
-  //  * Establishes or updates the WebSocket connection for liked quotes.
-  //  * Stores the callbacks to be used for message and error handling.
-  //  */
-  // public connectToLikedQuotesStream(
-  //   onMessage: (quote: QuoteData) => void,
-  //   onError?: (event: Event) => void
-  // ): void {
-  //   // Store callbacks
-  //   this.onMessageCallback = onMessage;
-  //   this.onErrorCallback = onError || null;
+  /**
+   * Establishes a Server-Sent Events (SSE) connection for liked quotes.
+   */
+  public connectToLikedQuotesStream(
+    onMessage: (quote: QuoteData) => void,
+    onError?: (event: Event) => void
+  ): void {
+    this.onMessageCallback = onMessage;
+    this.onErrorCallback = onError || null;
 
-  //   // Prevent multiple connections
-  //   if (
-  //     this.websocket &&
-  //     (this.websocket.readyState === WebSocket.OPEN ||
-  //       this.websocket.readyState === WebSocket.CONNECTING)
-  //   ) {
-  //     console.warn(
-  //       'WebSocket connection already open or connecting. Updating callbacks.'
-  //     );
-  //     return; // Already connecting or open, just updated callbacks
-  //   }
+    if (
+      this.eventSource &&
+      this.eventSource.readyState !== EventSource.CLOSED
+    ) {
+      // console.warn(
+      //   'EventSource connection already open or connecting. Disconnect first to change callbacks or URL.'
+      // );
+      return;
+    }
 
-  //   this.websocket = new WebSocket(appSettings.apiWsUrl);
-  //   this.websocket.onopen = () => {
-  //     console.log('WebSocket connection established for liked quotes.');
-  //   };
+    const sseUrl = `${appSettings.apiSSEUrl}/quotes/likes`;
+    this.eventSource = new EventSource(sseUrl, { withCredentials: true });
 
-  //   this.websocket.onmessage = (event) => {
-  //     try {
-  //       const likedQuote: QuoteData = JSON.parse(event.data);
+    this.eventSource.onopen = () => {
+      console.log('SSE connection established for liked quotes.');
+    };
 
-  //       if (likedQuote) {
-  //         // Use the stored callback
-  //         if (this.onMessageCallback) {
-  //           console.log('Received liked quote via WebSocket:', likedQuote);
-  //           this.onMessageCallback(likedQuote);
-  //         }
-  //       } else {
-  //         console.warn(
-  //           'Received invalid WebSocket message format:',
-  //           event.data
-  //         );
-  //       }
-  //     } catch (error) {
-  //       console.error(
-  //         'Failed to parse WebSocket message:',
-  //         error,
-  //         'Data:',
-  //         event.data
-  //       );
-  //     }
-  //   };
+    this.eventSource.onmessage = (event: MessageEvent) => {
+      try {
+        const likedQuote: QuoteData = JSON.parse(event.data);
+        if (likedQuote && this.onMessageCallback) {
+          this.onMessageCallback(likedQuote);
+        }
+      } catch {
+        // console.error(
+        //   'Failed to parse SSE message data:',
+        //   error,
+        //   'Raw data:',
+        //   event.data
+        // );
+      }
+    };
 
-  //   this.websocket.onerror = (event) => {
-  //     console.error('WebSocket error:', event);
+    this.eventSource.onerror = (event: Event) => {
+      if (this.onErrorCallback) {
+        this.onErrorCallback(event);
+      }
+    };
+  }
 
-  //     // Use the stored callback
-  //     if (this.onErrorCallback) {
-  //       this.onErrorCallback(event);
-  //     }
-  //   };
-
-  //   this.websocket.onclose = (event) => {
-  //     console.log(
-  //       `WebSocket connection closed: Code=${event.code}, Reason=${event.reason}`
-  //     );
-  //     this.websocket = null;
-  //   };
-  // }
-
-  // /**
-  //  * Closes the WebSocket connection if it is open or connecting.
-  //  */
-  // public disconnectLikedQuotesStream(): void {
-  //   if (
-  //     this.websocket &&
-  //     (this.websocket.readyState === WebSocket.OPEN ||
-  //       this.websocket.readyState === WebSocket.CONNECTING)
-  //   ) {
-  //     console.log('Closing WebSocket connection.');
-  //     this.websocket.close();
-  //   }
-  //   // Clear callbacks even if already closed or closing
-  //   this.websocket = null; // Ensure instance is cleared
-  //   this.onMessageCallback = null;
-  //   this.onErrorCallback = null;
-  // }
+  /**
+   * Closes the Server-Sent Events (SSE) connection if it is open.
+   */
+  public disconnectLikedQuotesStream(): void {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    this.onMessageCallback = null;
+    this.onErrorCallback = null;
+  }
 }
 
 export const quoteService = new QuoteService();

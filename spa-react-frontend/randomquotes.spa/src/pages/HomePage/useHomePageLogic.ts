@@ -3,8 +3,12 @@ import { QuoteData } from '../../shared/types/quoteData';
 import { ApiError } from '../../shared/errors/apiError';
 import { quoteService } from '../../shared/services/quoteService';
 import { defaultErrorMessage } from '../../shared/constants/constants';
+import { generateUniqueReactKey } from '../../shared/helpers/uniquKeyGenerator';
+import { QuoteStreamData } from '../../shared/types/quoteStreamData';
 
 export function useHomePageLogic() {
+  const MAX_RECENTLY_LIKED_QUOTES = 4;
+
   // Quote fetch states
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [fetchLoading, setFetchLoading] = useState<boolean>(true);
@@ -15,9 +19,11 @@ export function useHomePageLogic() {
   const [likeLoading, setLikeLoading] = useState<boolean>(true);
   const [likeError, setLikeError] = useState<string | null>(null);
 
-  // WS stream states
-  //   const [liveLikedQuotes, setLiveLikedQuotes] = useState<QuoteData[]>([]);
-  //   const [wsError, setWsError] = useState<string | null>(null);
+  // SSE stream states
+  const [streamLikedQuotes, setStreamLikedQuotes] = useState<QuoteStreamData[]>(
+    []
+  );
+  const [sseError, setSSEError] = useState<string | null>(null);
 
   // --- Fetch hooks ---
   const fetchQuote = useCallback(async () => {
@@ -97,25 +103,40 @@ export function useHomePageLogic() {
     return () => clearTimeout(timer);
   }, [likeError]);
 
-  //   useEffect(() => {
-  //     setWsError(null);
-  //     const handleWebSocketMessage = (newLikedQuote: QuoteData) => {
-  //       setLiveLikedQuotes((prev) => [newLikedQuote, ...prev].slice(0, 10));
-  //     };
+  // --- SSE Stream Hooks ---
+  useEffect(() => {
+    setSSEError(null); // Reset stream error on new connection attempt
 
-  //     const handleWebSocketError = () => {
-  //       setWsError('Connection error with the liked quotes stream.');
-  //     };
+    const handleStreamMessage = (likedQuote: QuoteData) => {
+      // console.log('Received quote via SSE for stream list:', likedQuote);
 
-  //     quoteService.connectToLikedQuotesStream(
-  //       handleWebSocketMessage,
-  //       handleWebSocketError
-  //     );
+      const newStreamEntry: QuoteStreamData = {
+        reactKey: generateUniqueReactKey(),
+        quote: likedQuote,
+      };
 
-  //     return () => {
-  //       quoteService.disconnectLikedQuotesStream();
-  //     };
-  //   }, []);
+      setStreamLikedQuotes((prevStream) => {
+        // Prepend the new entry to show new likes on top
+        const updatedStream = [newStreamEntry, ...prevStream];
+        // Keep only the last N items
+        return updatedStream.slice(0, MAX_RECENTLY_LIKED_QUOTES);
+      });
+    };
+
+    const handleStreamError = (): // event?: Event
+    void => {
+      setSSEError('Connection error ...');
+    };
+
+    quoteService.connectToLikedQuotesStream(
+      handleStreamMessage,
+      handleStreamError
+    );
+
+    return () => {
+      quoteService.disconnectLikedQuotesStream();
+    };
+  }, []); // Empty dependency array ensures this runs once on mount
 
   return {
     quoteData,
@@ -128,7 +149,7 @@ export function useHomePageLogic() {
     likeError,
     handleLikeClick,
     //
-    // wsError,
-    // liveLikedQuotes,
+    sseError,
+    streamLikedQuotes,
   };
 }

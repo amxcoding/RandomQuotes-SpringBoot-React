@@ -15,8 +15,8 @@ function HomePage(): JSX.Element {
     likeError,
     handleLikeClick,
     // wshooks
-    // wsError,
-    // liveLikedQuotes,
+    sseError,
+    streamLikedQuotes,
   } = useHomePageLogic();
 
   const likeCount = quoteData?.likes ?? 0;
@@ -57,23 +57,23 @@ function HomePage(): JSX.Element {
         </div>
       </div>
 
-      {/* <aside className={styles.streamSection}>
+      <aside className={styles.streamSection}>
         <h3>Recently Liked Quotes</h3>
-        {wsError && <p className={styles.error}>{wsError}</p>}
-        {liveLikedQuotes.length === 0 && !wsError ? (
+        {sseError && <p className={styles.error}>{sseError}</p>}
+        {streamLikedQuotes.length === 0 && !sseError ? (
           <p>No liked quotes yet...</p>
         ) : (
           <ul className={styles.streamList}>
-            {liveLikedQuotes.map((likedQuote) => (
-              <li key={likedQuote.id} className={styles.streamItem}>
-                <p className={styles.streamQuote}>"{likedQuote.text}"</p>
-                <span className={styles.streamAuthor}>&mdash; {likedQuote.author}</span>
+            {streamLikedQuotes.map((likedQuote) => (
+              <li key={likedQuote.reactKey} className={styles.streamItem}>
+                <p className={styles.streamQuote}>"{likedQuote.quote.text}"</p>
+                <span className={styles.streamAuthor}>&mdash; {likedQuote.quote.author}</span>
               </li>
             ))}
           </ul>
         )}
-        {!wsError && liveLikedQuotes.length > 0 && <p className={styles.streamInfo}>Live updates via WebSocket</p>}
-      </aside> */}
+        {/* {!sseError && streamLikedQuotes.length > 0 && <p className={styles.streamInfo}>Live updates via WebSocket</p>} */}
+      </aside>
     </div>
   );
 }
