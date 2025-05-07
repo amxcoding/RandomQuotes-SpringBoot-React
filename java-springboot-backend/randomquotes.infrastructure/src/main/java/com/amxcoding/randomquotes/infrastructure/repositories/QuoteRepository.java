@@ -35,7 +35,8 @@ public class QuoteRepository implements IQuoteRepository {
         this.databaseClient = databaseClient;
     }
 
-    private static final BiFunction<Row, RowMetadata, QuoteEntity> QUOTE_ENTITY_MAPPING = (row, rowMetadata) -> {
+    // package private
+    static final BiFunction<Row, RowMetadata, QuoteEntity> QUOTE_ENTITY_MAPPING = (row, rowMetadata) -> {
         QuoteEntity entity = new QuoteEntity();
         entity.setId(row.get("id", Long.class));
         entity.setAuthor(row.get("author", String.class));
@@ -181,7 +182,7 @@ public class QuoteRepository implements IQuoteRepository {
     }
 
     @Override
-    public Mono<Optional<List<Quote>>> findRandomQuotes(int amount) {
+    public Mono<List<Quote>> findRandomQuotes(int amount) {
         if (amount <= 0) {
             return Mono.error(new IllegalArgumentException("Amount cannot be 0"));
         }
@@ -194,7 +195,6 @@ public class QuoteRepository implements IQuoteRepository {
                 .all()
                 .map(quoteEntityMapper::toQuote)
                 .collectList()
-                .map(Optional::of)
                 .onErrorMap(ex -> {
                     logger.error("Error fetching {} random quotes: {}", amount, ex.getMessage(), ex);
                     return new QuotePersistenceException(String.format("Database error fetching %d random quotes", amount), ex);
@@ -202,18 +202,20 @@ public class QuoteRepository implements IQuoteRepository {
     }
 
     @Override
-    public Flux<Quote> findAllQuotes(int limit) {
+    public Mono<List<Quote>> findRandomQuotesByProvider(int limit, String provider) {
         if (limit <= 0) {
-            return Flux.error(new IllegalArgumentException("Limit cannot be 0"));
+            return Mono.error(new IllegalArgumentException("Limit cannot be 0"));
         }
 
-        String sql = "SELECT id, author, text, likes, text_author_hash, provider FROM quotes ORDER BY id LIMIT :limit";
+        String sql = "SELECT id, author, text, likes, text_author_hash, provider FROM quotes WHERE provider = :provider ORDER BY RANDOM() LIMIT :limit";
 
         return this.databaseClient.sql(sql)
                 .bind("limit", limit)
+                .bind("provider", provider)
                 .map(QUOTE_ENTITY_MAPPING)
                 .all()
                 .map(quoteEntityMapper::toQuote)
+                .collectList()
                 .onErrorMap(ex -> {
                     logger.error("Error fetching all quotes: {}", ex.getMessage(), ex);
                     return new QuotePersistenceException("Database error fetching all quotes", ex);

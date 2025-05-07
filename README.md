@@ -70,7 +70,7 @@ Open spa-react-frontend/randomquotes.spa in any supported IDE to run the fronten
 
 ```bash
 # Install dependencies
-npm run install
+npm install
 
 # Start the development server
 npm run dev

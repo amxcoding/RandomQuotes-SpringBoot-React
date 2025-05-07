@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.Optional;
 
 public interface IQuoteFetchOrchestrator {
-    Mono<Optional<List<Quote>>> getQuotes();
+    Mono<List<Quote>> getQuotes();
 }

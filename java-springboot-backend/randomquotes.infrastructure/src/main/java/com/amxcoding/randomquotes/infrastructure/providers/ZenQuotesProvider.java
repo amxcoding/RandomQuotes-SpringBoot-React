@@ -25,10 +25,8 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("loggergingPlaceholderCountMatchesArgumentCount")
 @Component
 @Qualifier(Constants.QuoteProviders.ZEN_QUOTES)
 @Order(1)
@@ -40,12 +38,13 @@ public class ZenQuotesProvider implements IQuoteProvider {
     private final IQuoteRepository quoteRepository;
 
     // Configuration for retries
-    private static final int MAX_RETRY_ATTEMPTS = 3;
-    private static final Duration MIN_RETRY_BACKOFF = Duration.ofSeconds(1);
-    private static final Duration MAX_RETRY_BACKOFF = Duration.ofSeconds(5);
+    static final int MAX_RETRY_ATTEMPTS = 3;
+    static final Duration MIN_RETRY_BACKOFF = Duration.ofSeconds(1);
+    static final Duration MAX_RETRY_BACKOFF = Duration.ofSeconds(5);
 
     // Max available quotes to fetch
     private static final long PROVIDER_QUOTE_THRESHOLD = 3237;
+    static final int RANDOM_QUOTE_AMOUNT = 50;
 
     public ZenQuotesProvider(WebClient.Builder webClientBuilder,
                              @Value("${quoteprovider.zenquotes}") String baseUrl,
@@ -63,13 +62,13 @@ public class ZenQuotesProvider implements IQuoteProvider {
      * On final error, throws custom QuoteProviderException.
      */
     @Override
-    public Mono<Optional<List<Quote>>> fetchQuotes() {
+    public Mono<List<Quote>> fetchQuotes() {
         // let possible errors propagate
         return quoteRepository.countByProvider(getProviderName())
                 .flatMap(currentCount -> {
                     // Get from the database we have already fetched all available quotes
                     if (currentCount >= PROVIDER_QUOTE_THRESHOLD) {
-                        return Mono.just(Optional.<List<Quote>>empty());
+                        return quoteRepository.findRandomQuotesByProvider(RANDOM_QUOTE_AMOUNT, Constants.QuoteProviders.ZEN_QUOTES);
                     } else {
                         return doFetchAndPersistQuotes();
                     }
@@ -80,23 +79,23 @@ public class ZenQuotesProvider implements IQuoteProvider {
      * Performs the actual WebClient call, retry logic, mapping, and persistence.
      * This is called only if the quote count threshold is not met.
      */
-    private Mono<Optional<List<Quote>>> doFetchAndPersistQuotes() {
+    private Mono<List<Quote>> doFetchAndPersistQuotes() {
         return webClient
                 .get()
                 .uri("/quotes")
                 .retrieve()
                 .bodyToMono(ZenQuote[].class)
                 .flatMap(zenQuotes -> {
-                    if (zenQuotes != null && zenQuotes.length > 0) {
+                    if (zenQuotes.length > 0) {
                         List<Quote> fetchedQuotes = Arrays.stream(zenQuotes)
                                 .map(mapper::toQuote)
                                 .collect(Collectors.toList());
 
                         // propagate errors
                         return quoteRepository.bulkInsertQuotesIgnoreConflicts(fetchedQuotes, getProviderName())
-                                .then(Mono.just(Optional.of(fetchedQuotes)));
+                                .then(Mono.just(fetchedQuotes));
                     } else {
-                        return Mono.just(Optional.<List<Quote>>empty());
+                        return Mono.empty();
                     }
                 })
                 // Error on fetching
@@ -113,7 +112,7 @@ public class ZenQuotesProvider implements IQuoteProvider {
                             return new QuoteProviderException("Error fetching ZenQuotes: " + error.getMessage(), error);
                         }
                 )
-                .defaultIfEmpty(Optional.empty());
+                .defaultIfEmpty(List.of());
     }
 
 

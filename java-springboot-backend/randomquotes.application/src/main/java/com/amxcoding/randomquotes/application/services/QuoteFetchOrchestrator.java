@@ -46,7 +46,7 @@ public class QuoteFetchOrchestrator implements IQuoteFetchOrchestrator {
      *
      */
     @Override
-    public Mono<Optional<List<Quote>>> getQuotes() {
+    public Mono<List<Quote>> getQuotes() {
         if (quoteProviders.isEmpty()) {
             return fetchRandomFromDb();
         }
@@ -66,7 +66,7 @@ public class QuoteFetchOrchestrator implements IQuoteFetchOrchestrator {
                                     logger.warn("Provider {} failed (QuoteProviderException): {}",
                                             provider.getProviderName(), error.getMessage());
                                     // return empty list s.t. we can try next provider
-                                    return Mono.just(Optional.<List<Quote>>empty());
+                                    return Mono.empty();
                                 } else {
                                     // Propagate error
                                     logger.error("Unexpected error during fetch from provider {}: {}",
@@ -75,10 +75,10 @@ public class QuoteFetchOrchestrator implements IQuoteFetchOrchestrator {
                                 }
                             });
                 })
-                .filter(Optional::isPresent)
+                .filter(quotes -> !quotes.isEmpty())
                 .next()
                 .switchIfEmpty(Mono.defer(this::fetchRandomFromDb))
-                .defaultIfEmpty(Optional.empty())
+                .defaultIfEmpty(List.of())
                 .onErrorMap(error -> {
                     logger.error("Critical error during quote fetch orchestration: {}", error.getMessage(), error);
                     return new QuoteFetchOrchestratorException("CRITICAL error failed to get quotes: " + error.getMessage(), error);
@@ -89,22 +89,8 @@ public class QuoteFetchOrchestrator implements IQuoteFetchOrchestrator {
      * Fallback method to fetch random quotes from the database.
      * based on how many are available
      */
-    private Mono<Optional<List<Quote>>> fetchRandomFromDb() {
-        return quoteRepository.count()
-                .flatMap(currentCount -> {
-                    if (currentCount < FALLBACK_RANDOM_QUOTE_AMOUNT) {
-                        // Less than target amount available, fetch all
-                        return quoteRepository.findAllQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT)
-                                .collectList()
-                                .map(list -> list.isEmpty() ? Optional.<List<Quote>>empty() : Optional.of(list));
-                    } else {
-                        // More than threshold available pick randomly
-                        return quoteRepository.findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT);
-                    }
-                })
-                .onErrorMap(dbError -> {
-                    logger.error("Database fallback failed during count or fetch: {}", dbError.getMessage(), dbError);
-                   return new QuotePersistenceException("Database fallback failed during count or fetch: " + dbError.getMessage(), dbError);
-                });
+    private Mono<List<Quote>> fetchRandomFromDb() {
+        // Let errors propagate
+        return quoteRepository.findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT);
     }
 }

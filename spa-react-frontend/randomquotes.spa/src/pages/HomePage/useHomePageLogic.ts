@@ -108,7 +108,16 @@ export function useHomePageLogic() {
     setSSEError(null); // Reset stream error on new connection attempt
 
     const handleStreamMessage = (likedQuote: QuoteData) => {
-      // console.log('Received quote via SSE for stream list:', likedQuote);
+      console.log('Received liked quote:', likedQuote); // Debugging: log the received quote
+
+      // If likedQuote is undefined or null, treat it as an error
+      if (likedQuote === undefined || likedQuote === null) {
+        setSSEError('Connection error ...');
+        return;
+      }
+
+      // Clear error when valid quote is received
+      setSSEError(null);
 
       const newStreamEntry: QuoteStreamData = {
         reactKey: generateUniqueReactKey(),
@@ -123,8 +132,7 @@ export function useHomePageLogic() {
       });
     };
 
-    const handleStreamError = (): // event?: Event
-    void => {
+    const handleStreamError = (): void => {
       setSSEError('Connection error ...');
     };
 

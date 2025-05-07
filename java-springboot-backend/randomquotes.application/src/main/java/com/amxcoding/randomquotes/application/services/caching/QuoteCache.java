@@ -45,7 +45,7 @@ public class QuoteCache implements IQuoteCache {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Mono<Optional<List<Quote>>> getQuotes() {
+    public Mono<List<Quote>> getQuotes() {
         final String cacheKey = Constants.Cache.RANDOM_QUOTES_KEY;
 
         return Mono.fromCallable(() -> Optional.ofNullable(quotesCacheInstance.get(cacheKey)))
@@ -56,11 +56,11 @@ public class QuoteCache implements IQuoteCache {
                         Object cachedValue = wrapper.get();
 
                         // Try get cached values
-                        if (cachedValue instanceof Optional) {
+                        if (cachedValue instanceof List) {
                             try {
-                                Optional<List<Quote>> typedResult = (Optional<List<Quote>>) cachedValue;
+                                List<Quote> result = (List<Quote>) cachedValue;
                                 logger.debug("Cache hit for key '{}'", cacheKey);
-                                return Mono.just(typedResult);
+                                return Mono.just(result);
                             } catch (ClassCastException e) {
                                 logger.error("Cache hit for key '{}' but value has unexpected type: {}",
                                         cacheKey, cachedValue.getClass().getName(), e);
@@ -74,16 +74,14 @@ public class QuoteCache implements IQuoteCache {
                             return Mono.error(new QuoteCacheException("Error getting from cache!"));
                         }
                     } else {
-                        return Mono.<Optional<List<Quote>>>empty();
+                        return Mono.empty();
                     }
                 })
                 // fetch from orchestrator
                 .switchIfEmpty(Mono.defer(() -> {
                     return quoteFetchOrchestrator.getQuotes()
                             .flatMap(resultFromOrchestrator -> {
-                                boolean shouldCache = !resultFromOrchestrator
-                                        .map(List::isEmpty)
-                                        .orElse(false);
+                                boolean shouldCache = !resultFromOrchestrator.isEmpty();
 
                                 if (shouldCache) {
                                     try {

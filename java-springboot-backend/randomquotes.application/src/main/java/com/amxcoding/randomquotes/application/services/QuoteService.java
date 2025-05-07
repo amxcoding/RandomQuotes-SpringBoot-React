@@ -34,9 +34,8 @@ public class QuoteService implements IQuoteService {
     @Override
     public Mono<Optional<Quote>> getRandomQuote() {
         return quotesCache.getQuotes()
-                .flatMap(optionalQuotesList -> {
-                    if (optionalQuotesList.isPresent() && !optionalQuotesList.get().isEmpty()) {
-                        List<Quote> cachedQuotes = optionalQuotesList.get();
+                .flatMap(cachedQuotes -> {
+                    if (!cachedQuotes.isEmpty()) {
                         int randomIndex = ThreadLocalRandom.current().nextInt(cachedQuotes.size());
                         Quote cachedRandomQuote = cachedQuotes.get(randomIndex);
 

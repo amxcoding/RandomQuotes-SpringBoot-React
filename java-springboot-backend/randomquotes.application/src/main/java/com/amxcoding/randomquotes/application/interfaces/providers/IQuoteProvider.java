@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface IQuoteProvider {
-    Mono<Optional<List<Quote>>> fetchQuotes();
+    Mono<List<Quote>> fetchQuotes();
     String getProviderName();
 }

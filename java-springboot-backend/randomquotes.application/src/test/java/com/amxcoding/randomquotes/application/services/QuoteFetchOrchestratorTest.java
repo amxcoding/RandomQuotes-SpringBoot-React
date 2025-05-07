@@ -14,17 +14,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 
@@ -51,6 +48,7 @@ class QuoteFetchOrchestratorTest {
 
     @BeforeEach
     void setUp() {
+        // Arrange: Initialize common test data and mock behaviors for each test.
         quote1 = new Quote(1L, "Author One", "Text One", 1);
         quote2 = new Quote(2L, "Author Two", "Text Two", 2);
         provider1Quotes = List.of(quote1);
@@ -60,18 +58,17 @@ class QuoteFetchOrchestratorTest {
                 new Quote(102L, "DB Author 2", "DB Text 2", 22)
         );
 
-        reset(quoteRepository, provider1, provider2);
+        reset(quoteRepository, provider1, provider2); // Reset mocks before each test.
 
+        // Arrange: Lenient stubbing for provider names, as they might be called for logging.
         lenient().when(provider1.getProviderName()).thenReturn("Provider1");
         lenient().when(provider2.getProviderName()).thenReturn("Provider2");
     }
 
-    // Helper to create the orchestrator instance, simulating constructor logic
     private void initializeOrchestrator(List<IQuoteProvider> providers) {
-        // Create a mutable list to allow sorting, as the constructor does
+        // Helper for Arrange phase: Creates and initializes the orchestrator instance.
         List<IQuoteProvider> mutableProviders = new ArrayList<>(providers);
-        // Simulate the sorting based on @Order (or natural order if no annotation)
-        mutableProviders.sort(AnnotationAwareOrderComparator.INSTANCE);
+        mutableProviders.sort(AnnotationAwareOrderComparator.INSTANCE); // Simulate constructor sorting.
         quoteFetchOrchestrator = new QuoteFetchOrchestrator(mutableProviders, quoteRepository);
     }
 
@@ -82,134 +79,123 @@ class QuoteFetchOrchestratorTest {
         @Test
         @DisplayName("1. Should return quotes from the first provider if it succeeds")
         void getQuotes_whenFirstProviderSucceeds_shouldReturnItsQuotes() {
-            // Arrange: Initialize with two providers. Provider1 will succeed.
-            // Note: Order matters. If provider2 had @Order(1) and provider1 @Order(2),
-            // the sorting in initializeOrchestrator would place provider2 first.
-            // Assuming natural order or provider1 is explicitly ordered first.
+            // Arrange: Setup orchestrator and mock provider1 to return quotes.
             initializeOrchestrator(List.of(provider1, provider2));
-            when(provider1.fetchQuotes()).thenReturn(Mono.just(Optional.of(provider1Quotes)));
+            when(provider1.fetchQuotes()).thenReturn(Mono.just(provider1Quotes));
 
-            // Act: Call the method under test.
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Verify the result contains quotes from provider1.
+            // Assert: Verify that the result contains quotes from provider1 and interactions are correct.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(provider1Quotes))
+                    .expectNext(provider1Quotes)
                     .verifyComplete();
 
-            // Assert: Verify interactions. Only provider1 should be called.
             verify(provider1).fetchQuotes();
-            verifyNoInteractions(provider2);
-            verifyNoInteractions(quoteRepository);
+            verifyNoInteractions(provider2); // Provider2 should not be called.
+            verifyNoInteractions(quoteRepository); // Repository should not be called.
         }
 
         @Test
-        @DisplayName("2. Should return quotes from the second provider if the first returns empty")
+        @DisplayName("2. Should return quotes from the second provider if the first returns empty list")
         void getQuotes_whenFirstProviderEmpty_andSecondSucceeds_shouldReturnSecondProviderQuotes() {
-            // Arrange: Provider1 returns empty, Provider2 returns quotes.
+            // Arrange: Mock provider1 to return an empty list, provider2 to return quotes.
             initializeOrchestrator(List.of(provider1, provider2));
-            when(provider1.fetchQuotes()).thenReturn(Mono.just(Optional.empty()));
-            when(provider2.fetchQuotes()).thenReturn(Mono.just(Optional.of(provider2Quotes)));
+            when(provider1.fetchQuotes()).thenReturn(Mono.just(Collections.emptyList()));
+            when(provider2.fetchQuotes()).thenReturn(Mono.just(provider2Quotes));
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Expect quotes from provider2.
+            // Assert: Verify that the result contains quotes from provider2.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(provider2Quotes))
+                    .expectNext(provider2Quotes)
                     .verifyComplete();
 
-            // Assert: Both providers were called. Repository was not.
-            verify(provider1).fetchQuotes();
-            verify(provider2).fetchQuotes();
-            verifyNoInteractions(quoteRepository);
+            verify(provider1).fetchQuotes(); // Provider1 is called.
+            verify(provider2).fetchQuotes(); // Provider2 is called.
+            verifyNoInteractions(quoteRepository); // Repository should not be called.
         }
 
         @Test
         @DisplayName("3. Should return quotes from second provider if first fails recoverably (QuoteProviderException)")
         void getQuotes_whenFirstProviderFailsRecoverably_andSecondSucceeds_shouldReturnSecondProviderQuotes() {
-            // Arrange: Provider1 fails with a 'recoverable' exception, Provider2 succeeds.
+            // Arrange: Mock provider1 to fail with a recoverable error, provider2 to return quotes.
             initializeOrchestrator(List.of(provider1, provider2));
             QuoteProviderException provider1Error = new QuoteProviderException("Provider1 API timeout", null);
-            // Mock provider1 to return the specific error type handled by onErrorResume to continue
             when(provider1.fetchQuotes()).thenReturn(Mono.error(provider1Error));
-            when(provider2.fetchQuotes()).thenReturn(Mono.just(Optional.of(provider2Quotes)));
+            when(provider2.fetchQuotes()).thenReturn(Mono.just(provider2Quotes));
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Expect quotes from provider2 as the orchestrator recovered from provider1's error.
+            // Assert: Verify that the result contains quotes from provider2.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(provider2Quotes))
+                    .expectNext(provider2Quotes)
                     .verifyComplete();
 
-            // Assert: Both providers were called. Repository was not.
-            // Verify getProviderName was likely called due to logging in onErrorResume
             verify(provider1).fetchQuotes();
-            verify(provider1).getProviderName(); // Called for logging the warning
+            verify(provider1).getProviderName(); // Called for logging the warning.
             verify(provider2).fetchQuotes();
             verifyNoInteractions(quoteRepository);
         }
 
         @Test
-        @DisplayName("4. Should propagate critical error immediately if first provider fails with QuotePersistenceException")
+        @DisplayName("4. Should propagate critical error if first provider fails with QuotePersistenceException")
         void getQuotes_whenFirstProviderFailsCritically_shouldPropagateError() {
-            // Arrange: Provider1 fails with a 'critical' persistence error.
+            // Arrange: Mock provider1 to fail with a critical persistence error.
             initializeOrchestrator(List.of(provider1, provider2));
             QuotePersistenceException criticalError = new QuotePersistenceException("DB connection lost during provider1 persistence", null);
-            // Mock provider1 to return the critical error
             when(provider1.fetchQuotes()).thenReturn(Mono.error(criticalError));
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Expect the specific critical error, wrapped by the orchestrator's final onErrorMap.
+            // Assert: Verify that the specific critical error is propagated, wrapped by the orchestrator's exception.
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(error -> {
                         assertThat(error)
                                 .isInstanceOf(QuoteFetchOrchestratorException.class)
-                                .hasMessageContaining("CRITICAL error failed to get quotes: " + criticalError.getMessage()) // Check outer message
-                                .hasCause(criticalError); // Check that the original critical error is the direct cause
+                                .hasMessageContaining("CRITICAL error failed to get quotes: " + criticalError.getMessage())
+                                .hasCause(criticalError); // The original critical error should be the cause.
                     })
                     .verify();
 
-            // Assert: Only provider1 was called.
             verify(provider1).fetchQuotes();
-            verify(provider1).getProviderName(); // Called for logging the critical error
-            verifyNoInteractions(provider2);
-            verifyNoInteractions(quoteRepository);
+            verify(provider1).getProviderName(); // Called for logging the critical error.
+            verifyNoInteractions(provider2); // Provider2 should not be called.
+            verifyNoInteractions(quoteRepository); // Repository should not be called.
         }
 
         @Test
         @DisplayName("5. Should wrap and propagate unexpected error if first provider fails unexpectedly")
         void getQuotes_whenFirstProviderFailsUnexpectedly_shouldWrapAndPropagateError() {
-            // Arrange: Provider1 fails with an unexpected RuntimeException.
+            // Arrange: Mock provider1 to fail with an unexpected runtime error.
             initializeOrchestrator(List.of(provider1, provider2));
             RuntimeException unexpectedError = new RuntimeException("Something unexpected broke in Provider1");
             when(provider1.fetchQuotes()).thenReturn(Mono.error(unexpectedError));
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Expect the error to be wrapped twice.
-            // 1. Inner wrap: In onErrorResume (else block) -> QuoteFetchOrchestratorException("Unexpected error...")
-            // 2. Outer wrap: Final onErrorMap -> QuoteFetchOrchestratorException("CRITICAL error...")
+            // Assert: Verify that the error is wrapped twice, first by the inner handler, then by the final orchestrator handler.
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(error -> {
-                        assertThat(error)
-                                .isInstanceOf(QuoteFetchOrchestratorException.class);
+                        assertThat(error) // Outermost wrapper (final onErrorMap).
+                                .isInstanceOf(QuoteFetchOrchestratorException.class)
+                                .hasMessageContaining("CRITICAL error failed to get quotes:");
 
-                        assertThat(error.getCause())
-                                .isInstanceOf(QuoteFetchOrchestratorException.class);
+                        assertThat(error.getCause()) // Inner wrapper (from concatMap's onErrorResume).
+                                .isInstanceOf(QuoteFetchOrchestratorException.class)
+                                .hasMessageContaining("Unexpected error: " + unexpectedError.getMessage());
 
-                        assertThat(error.getCause().getCause())
-                                .isSameAs(unexpectedError); // Original cause check
+                        assertThat(error.getCause().getCause()) // Original unexpected error.
+                                .isSameAs(unexpectedError);
                     })
                     .verify();
 
-            // Assert: Only provider1 was called.
             verify(provider1).fetchQuotes();
-            verify(provider1).getProviderName(); // Called for logging the unexpected error
+            verify(provider1).getProviderName(); // Called for logging the unexpected error.
             verifyNoInteractions(provider2);
             verifyNoInteractions(quoteRepository);
         }
@@ -221,247 +207,150 @@ class QuoteFetchOrchestratorTest {
 
         @BeforeEach
         void setupProvidersToFailOrReturnEmpty() {
-            // Arrange common setup for fallback tests: Ensure providers don't succeed.
+            // Arrange: Common setup for DB fallback tests: initialize orchestrator and make all providers fail or return empty.
             initializeOrchestrator(List.of(provider1, provider2));
-            // Provider 1 returns empty optional
-            when(provider1.fetchQuotes()).thenReturn(Mono.just(Optional.empty()));
-            // Provider 2 fails recoverably
-            when(provider2.fetchQuotes()).thenReturn(Mono.error(new QuoteProviderException("Provider 2 unavailable", null)));
+            when(provider1.fetchQuotes()).thenReturn(Mono.just(Collections.emptyList())); // Provider 1 returns empty.
+            when(provider2.fetchQuotes()).thenReturn(Mono.error(new QuoteProviderException("Provider 2 unavailable", null))); // Provider 2 fails.
         }
 
         @Test
-        @DisplayName("6. Fallback: Should call findRandomQuotes when DB count >= threshold")
-        void getQuotes_whenAllProvidersFail_andDbCountHigh_shouldCallFindRandomQuotes() {
-            // Arrange: Mock DB count high, triggering findRandomQuotes. Mock findRandomQuotes success.
-            when(quoteRepository.count()).thenReturn(Mono.just((long) FALLBACK_RANDOM_QUOTE_AMOUNT)); // Exact threshold or more
+        @DisplayName("6. Fallback: Should call findRandomQuotes from DB when all providers exhausted")
+        void getQuotes_whenAllProvidersExhausted_shouldCallFindRandomQuotes() {
+            // Arrange: Mock the repository's findRandomQuotes to return DB quotes.
             when(quoteRepository.findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT))
-                    .thenReturn(Mono.just(Optional.of(dbQuotes)));
+                    .thenReturn(Mono.just(dbQuotes));
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Expect quotes from the DB (findRandomQuotes path).
+            // Assert: Verify that the result contains quotes from the database.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(dbQuotes))
+                    .expectNext(dbQuotes)
                     .verifyComplete();
 
-            // Assert: Verify interactions. Providers tried, then DB count and findRandomQuotes called.
-            verify(provider1).fetchQuotes();
-            verify(provider2).fetchQuotes();
-            verify(provider2).getProviderName(); // For logging recoverable error
-            verify(quoteRepository).count();
-            verify(quoteRepository).findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT);
-            verify(quoteRepository, never()).findAllQuotes(anyInt()); // Ensure findAllQuotes was NOT called
+            verify(provider1).fetchQuotes(); // Provider1 is tried.
+            verify(provider2).fetchQuotes(); // Provider2 is tried.
+            verify(provider2).getProviderName(); // Called for logging provider2's error.
+            verify(quoteRepository).findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT); // DB fallback is invoked.
         }
 
         @Test
-        @DisplayName("7. Fallback: Should call findAllQuotes when DB count < threshold")
-        void getQuotes_whenAllProvidersFail_andDbCountLow_shouldCallFindAllQuotes() {
-            // Arrange: Mock DB count low, triggering findAllQuotes. Mock findAllQuotes success.
-            when(quoteRepository.count()).thenReturn(Mono.just((long) FALLBACK_RANDOM_QUOTE_AMOUNT - 1)); // Less than threshold
-            // findAllQuotes returns a Flux in the repository interface/impl
-            when(quoteRepository.findAllQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT))
-                    .thenReturn(Flux.fromIterable(dbQuotes));
+        @DisplayName("7. Fallback: Should return empty list when findRandomQuotes from DB returns empty")
+        void getQuotes_whenAllProvidersExhausted_andFindRandomQuotesEmpty_shouldReturnEmptyList() {
+            // Arrange: Mock the repository's findRandomQuotes to return an empty list.
+            when(quoteRepository.findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT))
+                    .thenReturn(Mono.just(Collections.emptyList()));
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Expect quotes from the DB (findAllQuotes path).
+            // Assert: Verify that the result is an empty list.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(dbQuotes)) // Service collects the Flux to a List and wraps in Optional
+                    .expectNext(Collections.emptyList())
                     .verifyComplete();
 
-            // Assert: Verify interactions. Providers tried, then DB count and findAllQuotes called.
             verify(provider1).fetchQuotes();
             verify(provider2).fetchQuotes();
-            verify(provider2).getProviderName(); // For logging recoverable error
-            verify(quoteRepository).count();
-            verify(quoteRepository).findAllQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT);
-            verify(quoteRepository, never()).findRandomQuotes(anyInt()); // Ensure findRandomQuotes was NOT called
+            verify(provider2).getProviderName();
+            verify(quoteRepository).findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT); // DB fallback is invoked.
         }
 
-        @Test
-        @DisplayName("8. Fallback: Should return empty Optional when findAllQuotes returns empty")
-        void getQuotes_whenAllProvidersFail_andFindAllEmpty_shouldReturnEmpty() {
-            // Arrange: Mock DB count low. Mock findAllQuotes returns empty Flux.
-            when(quoteRepository.count()).thenReturn(Mono.just(10L)); // Count < Threshold
-            when(quoteRepository.findAllQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT)).thenReturn(Flux.empty());
-
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
-
-            // Assert: Expect empty Optional as DB fallback yielded no quotes.
-            StepVerifier.create(resultMono)
-                    .expectNext(Optional.empty()) // The service maps empty list from collectList to Optional.empty()
-                    .verifyComplete();
-
-            // Assert: Verify interactions.
-            verify(provider1).fetchQuotes();
-            verify(provider2).fetchQuotes();
-            verify(provider2).getProviderName(); // For logging recoverable error
-            verify(quoteRepository).count();
-            verify(quoteRepository).findAllQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT);
-            verify(quoteRepository, never()).findRandomQuotes(anyInt());
-        }
 
         @Test
-        @DisplayName("9. Fallback Error: Should propagate error when DB count fails")
-        void getQuotes_whenAllProvidersFail_andDbCountFails_shouldPropagateError() {
-            // Arrange: Mock DB count to fail.
-            QuotePersistenceException dbCountError = new QuotePersistenceException("DB count failed", null);
-            when(quoteRepository.count()).thenReturn(Mono.error(dbCountError));
-
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
-
-            // Assert: Expect error wrapped twice.
-            // 1. Inner wrap: fetchRandomFromDb's onErrorMap -> QuotePersistenceException("Database fallback failed...")
-            // 2. Outer wrap: Final onErrorMap -> QuoteFetchOrchestratorException("CRITICAL error...")
-            StepVerifier.create(resultMono)
-                    .expectErrorSatisfies(error -> {
-                        assertThat(error)
-                                .isInstanceOf(QuoteFetchOrchestratorException.class);
-
-                        assertThat(error.getCause())
-                                .isInstanceOf(QuotePersistenceException.class);
-
-                        assertThat(error.getCause().getCause()) // Original cause
-                                .isSameAs(dbCountError);
-                    })
-                    .verify();
-
-            // Assert: Verify interactions. Providers tried, DB count called.
-            verify(provider1).fetchQuotes();
-            verify(provider2).fetchQuotes();
-            verify(provider2).getProviderName(); // For logging recoverable error
-            verify(quoteRepository).count();
-            verify(quoteRepository, never()).findAllQuotes(anyInt());
-            verify(quoteRepository, never()).findRandomQuotes(anyInt());
-        }
-
-        @Test
-        @DisplayName("10. Fallback Error: Should propagate error when findRandomQuotes fails")
-        void getQuotes_whenAllProvidersFail_andFindRandomFails_shouldPropagateError() {
-            // Arrange: Mock DB count high. Mock findRandomQuotes to fail.
-            when(quoteRepository.count()).thenReturn(Mono.just(100L)); // Count >= Threshold
+        @DisplayName("8. Fallback Error: Should propagate error when findRandomQuotes from DB fails")
+        void getQuotes_whenAllProvidersExhausted_andFindRandomQuotesFails_shouldPropagateError() {
+            // Arrange: Mock the repository's findRandomQuotes to return an error.
             QuotePersistenceException dbFetchError = new QuotePersistenceException("DB random fetch failed", null);
             when(quoteRepository.findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT)).thenReturn(Mono.error(dbFetchError));
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Expect error wrapped twice (similar to count failure).
+            // Assert: Verify that the DB error is propagated, wrapped by the orchestrator's final exception handler.
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(error -> {
-                        assertThat(error)
-                                .isInstanceOf(QuoteFetchOrchestratorException.class);
+                        assertThat(error) // Outermost wrapper (final onErrorMap).
+                                .isInstanceOf(QuoteFetchOrchestratorException.class)
+                                .hasMessageContaining("CRITICAL error failed to get quotes: " + dbFetchError.getMessage());
 
-                        assertThat(error.getCause())
-                                .isInstanceOf(QuotePersistenceException.class); // Inner wrapper
-
-                        assertThat(error.getCause().getCause()) // Original cause
+                        assertThat(error.getCause()) // The original DB error.
                                 .isSameAs(dbFetchError);
                     })
                     .verify();
 
-            // Assert: Verify interactions. Providers tried, count called, findRandom called.
             verify(provider1).fetchQuotes();
             verify(provider2).fetchQuotes();
-            verify(provider2).getProviderName(); // For logging recoverable error
-            verify(quoteRepository).count();
-            verify(quoteRepository).findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT);
-            verify(quoteRepository, never()).findAllQuotes(anyInt());
+            verify(provider2).getProviderName();
+            verify(quoteRepository).findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT); // DB fallback is attempted.
         }
-
-        @Test
-        @DisplayName("11. Fallback Error: Should propagate error when findAllQuotes fails")
-        void getQuotes_whenAllProvidersFail_andFindAllFails_shouldPropagateError() {
-            // Arrange: Mock DB count low. Mock findAllQuotes to fail with Flux.error.
-            when(quoteRepository.count()).thenReturn(Mono.just(10L)); // Count < Threshold
-            QuotePersistenceException dbFetchError = new QuotePersistenceException("DB find all failed", null);
-            when(quoteRepository.findAllQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT)).thenReturn(Flux.error(dbFetchError));
-
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
-
-            // Assert: Expect error wrapped twice (similar to count/findRandom failure).
-            StepVerifier.create(resultMono)
-                    .expectErrorSatisfies(error -> {
-                        assertThat(error)
-                                .isInstanceOf(QuoteFetchOrchestratorException.class); // Outer wrapper
-
-                        assertThat(error.getCause())
-                                .isInstanceOf(QuotePersistenceException.class); // Inner wrapper
-
-                        assertThat(error.getCause().getCause()) // Original cause
-                                .isSameAs(dbFetchError);
-                    })
-                    .verify();
-
-            // Assert: Verify interactions. Providers tried, count called, findAll called.
-            verify(provider1).fetchQuotes();
-            verify(provider2).fetchQuotes();
-            verify(provider2).getProviderName(); // For logging recoverable error
-            verify(quoteRepository).count();
-            verify(quoteRepository).findAllQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT);
-            verify(quoteRepository, never()).findRandomQuotes(anyInt());
-        }
-    } // End of DbFallbackScenarios Nested Class
+    }
 
     @Nested
     @DisplayName("getQuotes() - Edge Cases")
     class EdgeCaseScenarios {
 
         @Test
-        @DisplayName("12. No Providers: Should fallback to DB immediately")
-        void getQuotes_whenNoProvidersConfigured_shouldFallbackToDb() {
-            // Arrange: Initialize orchestrator with an empty provider list.
+        @DisplayName("9. No Providers: Should fallback to DB immediately and use findRandomQuotes")
+        void getQuotes_whenNoProvidersConfigured_shouldFallbackToDbUsingFindRandomQuotes() {
+            // Arrange: Initialize orchestrator with an empty list of providers. Mock DB to return quotes.
             initializeOrchestrator(Collections.emptyList());
-            // Arrange: Mock DB fallback (using findRandomQuotes path as an example)
-            when(quoteRepository.count()).thenReturn(Mono.just(100L)); // Count >= Threshold
             when(quoteRepository.findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT))
-                    .thenReturn(Mono.just(Optional.of(dbQuotes)));
+                    .thenReturn(Mono.just(dbQuotes));
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Assert: Verify the result comes from the DB fallback.
+            // Assert: Verify that the result contains quotes from the database.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(dbQuotes))
+                    .expectNext(dbQuotes)
                     .verifyComplete();
 
-            // Assert: Verify interactions. No providers called, only DB fallback methods.
-            verifyNoInteractions(provider1, provider2); // Ensure no provider mocks were touched
-            verify(quoteRepository).count();
-            verify(quoteRepository).findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT);
-            verify(quoteRepository, never()).findAllQuotes(anyInt());
+            verifyNoInteractions(provider1, provider2); // No providers should be called.
+            verify(quoteRepository).findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT); // DB fallback is invoked directly.
         }
 
         @Test
-        @DisplayName("13. Providers succeed but return Optional<null> (Bad Practice but test resilience)")
-        void getQuotes_whenProviderReturnsOptionalNull_shouldTreatAsEmptyAndContinue() {
-            // Arrange: Provider1 returns Optional containing null (should be avoided in real code)
-            // Provider2 returns valid data.
-            // Note: Mono.just(Optional.ofNullable(null)) is equivalent to Mono.just(Optional.empty())
+        @DisplayName("10. Providers one returns empty list, second succeeds")
+        void getQuotes_whenFirstProviderReturnsEmptyList_shouldProceedToNext() {
+            // Arrange: Initialize orchestrator. Mock provider1 to return empty, provider2 to succeed.
             initializeOrchestrator(List.of(provider1, provider2));
-            
-            // Simulate provider returning Mono containing an Optional containing null
-            when(provider1.fetchQuotes()).thenReturn(Mono.just(Optional.ofNullable(null))); // This is just Optional.empty()
-            when(provider2.fetchQuotes()).thenReturn(Mono.just(Optional.of(provider2Quotes)));
+            when(provider1.fetchQuotes()).thenReturn(Mono.just(Collections.emptyList()));
+            when(provider2.fetchQuotes()).thenReturn(Mono.just(provider2Quotes));
 
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
 
-            // Act
-            Mono<Optional<List<Quote>>> resultMono = quoteFetchOrchestrator.getQuotes();
-
-            // Assert: filter(Optional::isPresent) correctly handles Optional.empty(), proceeds to provider2
+            // Assert: Verify that the result contains quotes from provider2.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(provider2Quotes))
+                    .expectNext(provider2Quotes)
                     .verifyComplete();
 
-            // Assert: Both providers were called
             verify(provider1).fetchQuotes();
             verify(provider2).fetchQuotes();
-            verifyNoInteractions(quoteRepository);
+            verifyNoInteractions(quoteRepository); // Repository should not be called.
+        }
+
+        @Test
+        @DisplayName("11. All providers return empty list, fallback to DB returns empty list, should result in empty list")
+        void getQuotes_whenAllProvidersAndDbFallbackReturnEmpty_shouldReturnEmptyList() {
+            // Arrange: Initialize orchestrator. Mock all providers and DB fallback to return empty lists.
+            initializeOrchestrator(List.of(provider1, provider2));
+            when(provider1.fetchQuotes()).thenReturn(Mono.just(Collections.emptyList()));
+            when(provider2.fetchQuotes()).thenReturn(Mono.just(Collections.emptyList()));
+            when(quoteRepository.findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT))
+                    .thenReturn(Mono.just(Collections.emptyList()));
+
+            // Act: Execute the method under test.
+            Mono<List<Quote>> resultMono = quoteFetchOrchestrator.getQuotes();
+
+            // Assert: Verify that the final result is an empty list due to the .defaultIfEmpty(List.of()) safeguard.
+            StepVerifier.create(resultMono)
+                    .expectNext(Collections.emptyList())
+                    .verifyComplete();
+
+            verify(provider1).fetchQuotes(); // Provider1 is tried.
+            verify(provider2).fetchQuotes(); // Provider2 is tried.
+            verify(quoteRepository).findRandomQuotes(FALLBACK_RANDOM_QUOTE_AMOUNT); // DB fallback is invoked.
         }
     }
 }

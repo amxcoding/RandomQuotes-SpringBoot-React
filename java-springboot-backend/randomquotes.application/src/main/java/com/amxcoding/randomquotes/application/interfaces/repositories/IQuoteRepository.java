@@ -1,7 +1,6 @@
 package com.amxcoding.randomquotes.application.interfaces.repositories;
 
 import com.amxcoding.randomquotes.domain.entities.Quote;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -15,6 +14,6 @@ public interface IQuoteRepository {
     Mono<Boolean> decrementLikeCount(Long id);
     Mono<Long> count();
     Mono<Long> countByProvider(String provider);
-    Mono<Optional<List<Quote>>>findRandomQuotes(int amount);
-    Flux<Quote> findAllQuotes(int limit);
+    Mono<List<Quote>>findRandomQuotes(int amount);
+    Mono<List<Quote>>findRandomQuotesByProvider(int amount, String provider);
 }

@@ -59,16 +59,15 @@ class QuoteServiceTest {
         @DisplayName("1. Cache Hit: Should return quote directly from cache if ID is present")
         void getRandomQuote_whenCacheHit_andQuoteHasId_shouldReturnCachedQuote() {
             // Arrange: Mock cache returns a list containing one quote *with* an ID.
-            Optional<List<Quote>> cachedOptionalList = Optional.of(quoteListWithId);
-            when(quotesCache.getQuotes()).thenReturn(Mono.just(cachedOptionalList));
-            // Service logic should directly return this quote as its ID is not null.
+            // FIX: Return Mono<List<Quote>> instead of Mono<Optional<List<Quote>>>
+            when(quotesCache.getQuotes()).thenReturn(Mono.just(quoteListWithId));
 
             // Act: Call the service method.
             Mono<Optional<Quote>> resultMono = quoteService.getRandomQuote();
 
-            // Assert: Verify the exact quote with ID is returned.
+            // Assert: Verify the exact quote with ID is returned (wrapped in Optional by the service).
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(quoteWithId))
+                    .expectNext(Optional.of(quoteWithId)) // Service signature returns Optional
                     .verifyComplete();
 
             // Assert: Verify cache was checked, repository was not.
@@ -80,8 +79,9 @@ class QuoteServiceTest {
         @DisplayName("2. Cache Hit & Repo Hit: Should return quote from repository when cached quote has null ID")
         void getRandomQuote_whenCacheHit_andQuoteHasNullId_andRepoFinds_shouldReturnRepoQuote() {
             // Arrange: Mock cache returns a list containing one quote *without* an ID.
-            Optional<List<Quote>> cachedOptionalList = Optional.of(quoteListWithoutId);
-            when(quotesCache.getQuotes()).thenReturn(Mono.just(cachedOptionalList));
+            // FIX: Return Mono<List<Quote>>
+            when(quotesCache.getQuotes()).thenReturn(Mono.just(quoteListWithoutId));
+
             // Arrange: Calculate hash for the quote without ID.
             String expectedHash = quoteWithoutId.generateTextAuthorHash();
             // Arrange: Mock repository returning a potentially updated quote (with ID, likes) for that hash.
@@ -93,7 +93,7 @@ class QuoteServiceTest {
 
             // Assert: Verify the quote returned is the one from the repository lookup.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(quoteFromRepo))
+                    .expectNext(Optional.of(quoteFromRepo)) // Service signature returns Optional
                     .verifyComplete();
 
             // Assert: Verify cache and repository were called with the correct hash.
@@ -105,8 +105,9 @@ class QuoteServiceTest {
         @DisplayName("3. Cache Hit & Repo Miss: Should return empty Optional when cached quote has null ID and repo doesn't find hash")
         void getRandomQuote_whenCacheHit_andQuoteHasNullId_andRepoMisses_shouldReturnEmpty() {
             // Arrange: Mock cache returns a list containing one quote *without* an ID.
-            Optional<List<Quote>> cachedOptionalList = Optional.of(quoteListWithoutId);
-            when(quotesCache.getQuotes()).thenReturn(Mono.just(cachedOptionalList));
+            // FIX: Return Mono<List<Quote>>
+            when(quotesCache.getQuotes()).thenReturn(Mono.just(quoteListWithoutId));
+
             // Arrange: Calculate hash.
             String expectedHash = quoteWithoutId.generateTextAuthorHash();
             // Arrange: Mock repository returning empty for the hash lookup.
@@ -117,7 +118,7 @@ class QuoteServiceTest {
 
             // Assert: Verify the final result is an empty Optional.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.empty())
+                    .expectNext(Optional.empty()) // Service signature returns Optional
                     .verifyComplete();
 
             // Assert: Verify cache and repository were called.
@@ -126,42 +127,31 @@ class QuoteServiceTest {
         }
 
         @Test
-        @DisplayName("4. Cache Miss (Empty Optional): Should return empty Optional")
-        void getRandomQuote_whenCacheMiss_emptyOptional_shouldReturnEmpty() {
-            // Arrange: Mock cache to return an empty Optional.
-            when(quotesCache.getQuotes()).thenReturn(Mono.just(Optional.empty()));
-
-            // Act: Call the service method.
-            Mono<Optional<Quote>> resultMono = quoteService.getRandomQuote();
-
-            // Assert: Verify the service returns an empty Optional directly.
-            StepVerifier.create(resultMono)
-                    .expectNext(Optional.empty())
-                    .verifyComplete();
-
-            // Assert: Verify cache called, repository not called.
-            verify(quotesCache).getQuotes();
-            verifyNoInteractions(quoteRepository);
-        }
-
-        @Test
-        @DisplayName("5. Cache Miss (Optional<Empty List>): Should return empty Optional")
+        @DisplayName("4. Cache Miss (Empty List): Should return empty Optional")
+            // Test name adjusted: Cache miss means empty list according to new contract
         void getRandomQuote_whenCacheMiss_emptyList_shouldReturnEmpty() {
-            // Arrange: Mock cache to return an Optional containing an empty list.
-            when(quotesCache.getQuotes()).thenReturn(Mono.just(Optional.of(Collections.emptyList())));
+            // Arrange: Mock cache to return an empty list.
+            // FIX: Return Mono<List<Quote>> (empty list) instead of Mono<Optional.empty()>
+            when(quotesCache.getQuotes()).thenReturn(Mono.just(Collections.emptyList()));
 
             // Act: Call the service method.
             Mono<Optional<Quote>> resultMono = quoteService.getRandomQuote();
 
             // Assert: Verify the service returns an empty Optional.
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.empty())
+                    .expectNext(Optional.empty()) // Service signature returns Optional
                     .verifyComplete();
 
             // Assert: Verify cache called, repository not called.
             verify(quotesCache).getQuotes();
             verifyNoInteractions(quoteRepository);
         }
+
+        // Test 5 becomes redundant as it's the same case as Test 4 now.
+        // @Test
+        // @DisplayName("5. Cache Miss (Optional<Empty List>): Should return empty Optional")
+        // void getRandomQuote_whenCacheMiss_optionalEmptyList_shouldReturnEmpty() { ... }
+
 
         @Test
         @DisplayName("6. Cache Error: Should propagate error when cache fails")
@@ -187,8 +177,8 @@ class QuoteServiceTest {
         @DisplayName("7. Repository Error: Should propagate error when repository fails during hash lookup")
         void getRandomQuote_whenRepoErrorOnHashLookup_shouldPropagateError() {
             // Arrange: Mock cache returns quote without ID.
-            Optional<List<Quote>> cachedOptionalList = Optional.of(quoteListWithoutId);
-            when(quotesCache.getQuotes()).thenReturn(Mono.just(cachedOptionalList));
+            // FIX: Return Mono<List<Quote>>
+            when(quotesCache.getQuotes()).thenReturn(Mono.just(quoteListWithoutId));
             String expectedHash = quoteWithoutId.generateTextAuthorHash();
             // Arrange: Mock repository findByHash to return an error.
             QuotePersistenceException repoError = new QuotePersistenceException("DB error on findByHash", null);
@@ -215,7 +205,8 @@ class QuoteServiceTest {
             when(quoteWithEmptyHash.getId()).thenReturn(null); // Ensure ID is null
             when(quoteWithEmptyHash.generateTextAuthorHash()).thenReturn(""); // Force empty hash
             // Arrange: Mock cache to return this quote.
-            when(quotesCache.getQuotes()).thenReturn(Mono.just(Optional.of(List.of(quoteWithEmptyHash))));
+            // FIX: Return Mono<List<Quote>>
+            when(quotesCache.getQuotes()).thenReturn(Mono.just(List.of(quoteWithEmptyHash)));
 
             // Act: Call the service method.
             Mono<Optional<Quote>> resultMono = quoteService.getRandomQuote();
@@ -303,5 +294,4 @@ class QuoteServiceTest {
             verifyNoInteractions(quotesCache);
         }
     }
-
 }

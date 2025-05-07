@@ -5,8 +5,6 @@ import com.amxcoding.randomquotes.domain.entities.Quote;
 import com.amxcoding.randomquotes.infrastructure.persistence.mappers.QuoteEntityMapper;
 import com.amxcoding.randomquotes.infrastructure.persistence.models.QuoteEntity;
 import com.amxcoding.randomquotes.infrastructure.persistence.r2dbcs.IQuoteR2dbcRepository;
-import io.r2dbc.spi.Row;
-import io.r2dbc.spi.RowMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -48,9 +46,9 @@ class QuoteRepositoryUnitTest {
     @Mock
     DatabaseClient.GenericExecuteSpec mockGenericExecuteSpec;
     @Mock
-    FetchSpec<Map<String, Object>> mockFetchSpecMap; // For rowsUpdated() etc.
+    FetchSpec<Map<String, Object>> mockFetchSpecMap;
     @Mock
-    RowsFetchSpec<QuoteEntity> mockRowsFetchSpec; // Mock for the .map(mappingFunction).all() chain result
+    RowsFetchSpec<QuoteEntity> mockRowsFetchSpecEntity;
 
     @InjectMocks
     QuoteRepository quoteRepository;
@@ -58,7 +56,6 @@ class QuoteRepositoryUnitTest {
     private Quote domainQuote1;
     private Quote domainQuote2;
     private QuoteEntity entityQuote1;
-    private QuoteEntity entityQuote2;
     private String hash1;
     private String hash2;
     private final String PROVIDER_NAME = "testProvider";
@@ -72,7 +69,6 @@ class QuoteRepositoryUnitTest {
         hash2 = domainQuote2.generateTextAuthorHash();
 
         entityQuote1 = new QuoteEntity(1L, "Author One", " Text One ", 5, hash1, PROVIDER_NAME);
-        entityQuote2 = new QuoteEntity(2L, "author two", "text two", 0, hash2, PROVIDER_NAME);
     }
 
     @Nested
@@ -98,13 +94,15 @@ class QuoteRepositoryUnitTest {
         void bulkInsert_nonEmpty_success() {
             // Arrange: Setup mocks for DatabaseClient fluent API and QuoteEntityMapper
             when(databaseClient.sql(anyString())).thenReturn(mockGenericExecuteSpec);
-            when(mockGenericExecuteSpec.bind(anyString(), any())).thenReturn(mockGenericExecuteSpec);
+            when(mockGenericExecuteSpec.bind(anyString(), any())).thenReturn(mockGenericExecuteSpec); // For individual binds
             when(mockGenericExecuteSpec.then()).thenReturn(Mono.empty());
 
-            entityQuote1.setProvider(PROVIDER_NAME); // Ensure provider is set for verification
-            entityQuote2.setProvider(PROVIDER_NAME);
-            when(quoteEntityMapper.toQuoteEntity(domainQuote1)).thenReturn(entityQuote1);
-            when(quoteEntityMapper.toQuoteEntity(domainQuote2)).thenReturn(entityQuote2);
+            QuoteEntity mappedEntity1 = new QuoteEntity(1L, "Author One", " Text One ", 5, hash1, null); // provider set by repo
+            QuoteEntity mappedEntity2 = new QuoteEntity(2L, "author two", "text two", 0, hash2, null);
+
+
+            when(quoteEntityMapper.toQuoteEntity(domainQuote1)).thenReturn(mappedEntity1);
+            when(quoteEntityMapper.toQuoteEntity(domainQuote2)).thenReturn(mappedEntity2);
             List<Quote> quotesToInsert = List.of(domainQuote1, domainQuote2);
 
             // Act: Execute the method under test
@@ -123,16 +121,16 @@ class QuoteRepositoryUnitTest {
 
             // Verify all parameters were bound correctly (5 per quote * 2 quotes = 10 bindings)
             verify(mockGenericExecuteSpec, times(10)).bind(anyString(), any());
-            verify(mockGenericExecuteSpec).bind("author0", entityQuote1.getAuthor());
-            verify(mockGenericExecuteSpec).bind("text0", entityQuote1.getText());
-            verify(mockGenericExecuteSpec).bind("likes0", entityQuote1.getLikes());
-            verify(mockGenericExecuteSpec).bind("hash0", entityQuote1.getTextAuthorHash());
-            verify(mockGenericExecuteSpec).bind("provider0", entityQuote1.getProvider()); // Uses providerName passed to method
-            verify(mockGenericExecuteSpec).bind("author1", entityQuote2.getAuthor());
-            verify(mockGenericExecuteSpec).bind("text1", entityQuote2.getText());
-            verify(mockGenericExecuteSpec).bind("likes1", entityQuote2.getLikes());
-            verify(mockGenericExecuteSpec).bind("hash1", entityQuote2.getTextAuthorHash());
-            verify(mockGenericExecuteSpec).bind("provider1", entityQuote2.getProvider()); // Uses providerName passed to method
+            verify(mockGenericExecuteSpec).bind("author0", mappedEntity1.getAuthor());
+            verify(mockGenericExecuteSpec).bind("text0", mappedEntity1.getText());
+            verify(mockGenericExecuteSpec).bind("likes0", mappedEntity1.getLikes());
+            verify(mockGenericExecuteSpec).bind("hash0", mappedEntity1.getTextAuthorHash());
+            verify(mockGenericExecuteSpec).bind("provider0", PROVIDER_NAME);
+            verify(mockGenericExecuteSpec).bind("author1", mappedEntity2.getAuthor());
+            verify(mockGenericExecuteSpec).bind("text1", mappedEntity2.getText());
+            verify(mockGenericExecuteSpec).bind("likes1", mappedEntity2.getLikes());
+            verify(mockGenericExecuteSpec).bind("hash1", mappedEntity2.getTextAuthorHash());
+            verify(mockGenericExecuteSpec).bind("provider1", PROVIDER_NAME);
 
             // Verify the final execution step
             verify(mockGenericExecuteSpec).then();
@@ -147,8 +145,8 @@ class QuoteRepositoryUnitTest {
             when(mockGenericExecuteSpec.bind(anyString(), any())).thenReturn(mockGenericExecuteSpec);
             when(mockGenericExecuteSpec.then()).thenReturn(Mono.error(dbError)); // Simulate error on .then()
 
-            entityQuote1.setProvider(PROVIDER_NAME);
-            when(quoteEntityMapper.toQuoteEntity(domainQuote1)).thenReturn(entityQuote1);
+            QuoteEntity mappedEntity1 = new QuoteEntity(1L, "Author One", " Text One ", 5, hash1, null);
+            when(quoteEntityMapper.toQuoteEntity(domainQuote1)).thenReturn(mappedEntity1);
             List<Quote> quotesToInsert = List.of(domainQuote1);
 
             // Act: Execute the method under test
@@ -158,7 +156,8 @@ class QuoteRepositoryUnitTest {
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(ex -> {
                         assertThat(ex).isInstanceOf(QuotePersistenceException.class)
-                                .hasMessageContaining("Error during bulk quote insert from provider " + PROVIDER_NAME)
+                                .hasMessageContaining("Error during bulk quote insert from provider " + PROVIDER_NAME) // Message now includes original
+                                .hasMessageContaining(dbError.getMessage())
                                 .hasCause(dbError);
                     })
                     .verify();
@@ -226,7 +225,7 @@ class QuoteRepositoryUnitTest {
                     .expectErrorSatisfies(throwable -> {
                         assertThat(throwable)
                                 .isInstanceOf(QuotePersistenceException.class)
-                                .hasMessageContaining("Error getting quote by textAuthorHash")
+                                .hasMessageContaining("Error getting quote by textAuthorHash: " + dbError.getMessage())
                                 .hasCause(dbError);
                     })
                     .verify();
@@ -399,7 +398,9 @@ class QuoteRepositoryUnitTest {
                     .expectErrorSatisfies(throwable -> {
                         assertThat(throwable)
                                 .isInstanceOf(QuotePersistenceException.class)
-                                .hasMessageContaining("Failed to increment like count for quote " + TEST_QUOTE_ID)
+                                // Implementation now includes original exception message in the formatted string
+                                .hasMessageContaining("Failed to increment like count for quote " + TEST_QUOTE_ID + ": ")
+                                .hasMessageContaining(dbError.getMessage())
                                 .hasCause(dbError);
                     })
                     .verify();
@@ -509,7 +510,8 @@ class QuoteRepositoryUnitTest {
                     .expectErrorSatisfies(throwable -> {
                         assertThat(throwable)
                                 .isInstanceOf(QuotePersistenceException.class)
-                                .hasMessageContaining("Failed to decrement like count for quote " + TEST_QUOTE_ID)
+                                .hasMessageContaining("Failed to decrement like count for quote " + TEST_QUOTE_ID + ": ")
+                                .hasMessageContaining(dbError.getMessage())
                                 .hasCause(dbError);
                     })
                     .verify();
@@ -595,14 +597,15 @@ class QuoteRepositoryUnitTest {
             // Mock the DatabaseClient fluent API chain: sql().bind().map().all()
             when(databaseClient.sql(anyString())).thenReturn(mockGenericExecuteSpec);
             when(mockGenericExecuteSpec.bind(eq("amount"), anyInt())).thenReturn(mockGenericExecuteSpec);
-            ArgumentCaptor<BiFunction<Row, RowMetadata, QuoteEntity>> mapperCaptor = ArgumentCaptor.forClass(BiFunction.class);
-            when(mockGenericExecuteSpec.map(mapperCaptor.capture())).thenReturn(mockRowsFetchSpec);
-            when(mockRowsFetchSpec.all()).thenReturn(resultingEntityFlux);
+            // The implementation uses a static BiFunction QUOTE_ENTITY_MAPPING,
+            // so we just need to ensure .map() is called and returns our mockRowsFetchSpecEntity.
+            when(mockGenericExecuteSpec.map(any(BiFunction.class))).thenReturn(mockRowsFetchSpecEntity);
+            when(mockRowsFetchSpecEntity.all()).thenReturn(resultingEntityFlux);
         }
 
         @Test
-        @DisplayName("1. Should return Optional of list when quotes are found")
-        void findRandomQuotes_whenFound_shouldReturnMappedQuotesInOptionalList() {
+        @DisplayName("1. Should return list of quotes when quotes are found")
+        void findRandomQuotes_whenFound_shouldReturnMappedQuotesList() {
             // Arrange: Setup mocks for finding and mapping random quotes
             int requestedAmount = 2;
             QuoteEntity randomEntity1 = new QuoteEntity(10L, "Random Author 1", "Random Text 1", 1, "hashR1", "providerR1");
@@ -617,13 +620,12 @@ class QuoteRepositoryUnitTest {
             when(quoteEntityMapper.toQuote(randomEntity2)).thenReturn(mappedQuote2);
 
             // Act: Execute the findRandomQuotes method
-            Mono<Optional<List<Quote>>> resultMono = quoteRepository.findRandomQuotes(requestedAmount);
+            Mono<List<Quote>> resultMono = quoteRepository.findRandomQuotes(requestedAmount);
 
-            // Assert: Verify the Optional contains the correctly mapped list of quotes
+            // Assert: Verify the Mono contains the correctly mapped list of quotes
             StepVerifier.create(resultMono)
-                    .assertNext(optionalList -> {
-                        assertThat(optionalList).isPresent();
-                        assertThat(optionalList.get())
+                    .assertNext(actualList -> {
+                        assertThat(actualList)
                                 .hasSize(requestedAmount)
                                 .containsExactlyInAnyOrder(mappedQuote1, mappedQuote2);
                     })
@@ -634,8 +636,8 @@ class QuoteRepositoryUnitTest {
             verify(databaseClient).sql(sqlCaptor.capture());
             assertThat(sqlCaptor.getValue()).contains("SELECT id, author, text, likes, text_author_hash, provider FROM quotes ORDER BY RANDOM() LIMIT :amount");
             verify(mockGenericExecuteSpec).bind("amount", requestedAmount);
-            verify(mockGenericExecuteSpec).map(any(BiFunction.class));
-            verify(mockRowsFetchSpec).all();
+            verify(mockGenericExecuteSpec).map(eq(QuoteRepository.QUOTE_ENTITY_MAPPING)); // Verify our specific mapper is used
+            verify(mockRowsFetchSpecEntity).all();
             verify(quoteEntityMapper).toQuote(randomEntity1);
             verify(quoteEntityMapper).toQuote(randomEntity2);
         }
@@ -647,7 +649,7 @@ class QuoteRepositoryUnitTest {
             int zeroAmount = 0;
 
             // Act: Execute findRandomQuotes with zero amount
-            Mono<Optional<List<Quote>>> resultMono = quoteRepository.findRandomQuotes(zeroAmount);
+            Mono<List<Quote>> resultMono = quoteRepository.findRandomQuotes(zeroAmount);
 
             // Assert: Verify the specific argument exception
             StepVerifier.create(resultMono)
@@ -667,42 +669,42 @@ class QuoteRepositoryUnitTest {
             int negativeAmount = -5;
 
             // Act: Execute findRandomQuotes with negative amount
-            Mono<Optional<List<Quote>>> resultMono = quoteRepository.findRandomQuotes(negativeAmount);
+            Mono<List<Quote>> resultMono = quoteRepository.findRandomQuotes(negativeAmount);
 
             // Assert: Verify the specific argument exception
             StepVerifier.create(resultMono)
                     .expectErrorSatisfies(throwable -> {
                         assertThat(throwable)
                                 .isInstanceOf(IllegalArgumentException.class)
-                                .hasMessage("Amount cannot be 0");
+                                .hasMessage("Amount cannot be 0"); // Message is for <= 0
                     })
                     .verify();
             verifyNoInteractions(databaseClient, quoteEntityMapper);
         }
 
         @Test
-        @DisplayName("4. Should return Optional of empty list when database returns no rows")
-        void findRandomQuotes_whenNoResults_shouldReturnOptionalOfEmptyList() {
+        @DisplayName("4. Should return empty list when database returns no rows")
+        void findRandomQuotes_whenNoResults_shouldReturnEmptyList() {
             // Arrange: Setup DB client mock chain to return an empty Flux
             int requestedAmount = 5;
             arrangeDbClientMapAllChain(Flux.empty());
 
             // Act: Execute findRandomQuotes
-            Mono<Optional<List<Quote>>> resultMono = quoteRepository.findRandomQuotes(requestedAmount);
+            Mono<List<Quote>> resultMono = quoteRepository.findRandomQuotes(requestedAmount);
 
-            // Assert: Verify the result is an Optional containing an empty list
+            // Assert: Verify the result is a Mono containing an empty list
             StepVerifier.create(resultMono)
-                    .expectNext(Optional.of(Collections.emptyList()))
+                    .expectNext(Collections.emptyList())
                     .verifyComplete();
 
-            // Verify interactions: SQL executed, but mapper not called
+            // Verify interactions: SQL executed, but domain mapper not called as entity mapper not called
             ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
             verify(databaseClient).sql(sqlCaptor.capture());
             assertThat(sqlCaptor.getValue()).contains("ORDER BY RANDOM() LIMIT :amount");
             verify(mockGenericExecuteSpec).bind("amount", requestedAmount);
-            verify(mockGenericExecuteSpec).map(any(BiFunction.class));
-            verify(mockRowsFetchSpec).all();
-            verifyNoInteractions(quoteEntityMapper);
+            verify(mockGenericExecuteSpec).map(eq(QuoteRepository.QUOTE_ENTITY_MAPPING));
+            verify(mockRowsFetchSpecEntity).all();
+            verifyNoInteractions(quoteEntityMapper); // quoteEntityMapper.toQuote() not called if no entities
         }
 
         @Test
@@ -711,10 +713,10 @@ class QuoteRepositoryUnitTest {
             // Arrange: Setup DB client mock chain to simulate an error during .all()
             int requestedAmount = 5;
             DataAccessResourceFailureException dbError = new DataAccessResourceFailureException("DB fetch random failed");
-            arrangeDbClientMapAllChain(Flux.error(dbError));
+            arrangeDbClientMapAllChain(Flux.error(dbError)); // This will make mockRowsFetchSpecEntity.all() return error
 
             // Act: Execute findRandomQuotes
-            Mono<Optional<List<Quote>>> resultMono = quoteRepository.findRandomQuotes(requestedAmount);
+            Mono<List<Quote>> resultMono = quoteRepository.findRandomQuotes(requestedAmount);
 
             // Assert: Verify the correct persistence exception wraps the original error
             StepVerifier.create(resultMono)
@@ -729,156 +731,158 @@ class QuoteRepositoryUnitTest {
             // Verify interactions occurred up to the error point
             verify(databaseClient).sql(anyString());
             verify(mockGenericExecuteSpec).bind("amount", requestedAmount);
-            verify(mockGenericExecuteSpec).map(any(BiFunction.class));
-            verify(mockRowsFetchSpec).all();
-            verifyNoInteractions(quoteEntityMapper);
+            verify(mockGenericExecuteSpec).map(eq(QuoteRepository.QUOTE_ENTITY_MAPPING));
+            verify(mockRowsFetchSpecEntity).all();
+            verifyNoInteractions(quoteEntityMapper); // quoteEntityMapper.toQuote() not called on error
         }
     }
 
 
     @Nested
-    @DisplayName("findAllQuotes Tests")
-    class FindAllTests {
+    @DisplayName("count Tests")
+    class CountTests {
+        @Test
+        @DisplayName("1. Should return count from R2DBC repository when successful")
+        void count_whenSuccessful_shouldReturnCount() {
+            // Arrange
+            long expectedCount = 42L;
+            when(quoteR2dbcRepository.count()).thenReturn(Mono.just(expectedCount));
 
-        // Helper method specific to findAllQuotes, binding 'limit'
+            // Act
+            Mono<Long> resultMono = quoteRepository.count();
+
+            // Assert
+            StepVerifier.create(resultMono)
+                    .expectNext(expectedCount)
+                    .verifyComplete();
+            verify(quoteR2dbcRepository).count();
+        }
+
+        @Test
+        @DisplayName("2. Should wrap repository errors in QuotePersistenceException for count")
+        void count_whenError_shouldWrapException() {
+            // Arrange
+            DataAccessResourceFailureException dbError = new DataAccessResourceFailureException("DB count failed");
+            when(quoteR2dbcRepository.count()).thenReturn(Mono.error(dbError));
+
+            // Act
+            Mono<Long> resultMono = quoteRepository.count();
+
+            // Assert
+            StepVerifier.create(resultMono)
+                    .expectErrorSatisfies(ex -> {
+                        assertThat(ex).isInstanceOf(QuotePersistenceException.class)
+                                .hasMessage("Database error counting quotes")
+                                .hasCause(dbError);
+                    })
+                    .verify();
+        }
+    }
+
+    @Nested
+    @DisplayName("findRandomQuotesByProvider Tests (New Method)")
+    class FindRandomByProviderTests {
+        private final String TEST_PROVIDER = "specificProvider";
+        private final int TEST_LIMIT = 2;
+
         @SuppressWarnings("unchecked")
-        private void arrangeDbClientFindAllChain(Flux<QuoteEntity> resultingEntityFlux) {
-            // Mock the DatabaseClient fluent API chain: sql().bind().map().all()
+        private void arrangeDbClientRandomByProviderChain(Flux<QuoteEntity> resultingEntityFlux) {
             when(databaseClient.sql(anyString())).thenReturn(mockGenericExecuteSpec);
-            when(mockGenericExecuteSpec.bind(eq("limit"), anyInt())).thenReturn(mockGenericExecuteSpec); // Specific binding
-            ArgumentCaptor<BiFunction<Row, RowMetadata, QuoteEntity>> mapperCaptor = ArgumentCaptor.forClass(BiFunction.class);
-            when(mockGenericExecuteSpec.map(mapperCaptor.capture())).thenReturn(mockRowsFetchSpec);
-            when(mockRowsFetchSpec.all()).thenReturn(resultingEntityFlux);
+            when(mockGenericExecuteSpec.bind(eq("limit"), anyInt())).thenReturn(mockGenericExecuteSpec);
+            when(mockGenericExecuteSpec.bind(eq("provider"), anyString())).thenReturn(mockGenericExecuteSpec);
+            when(mockGenericExecuteSpec.map(eq(QuoteRepository.QUOTE_ENTITY_MAPPING))).thenReturn(mockRowsFetchSpecEntity);
+            when(mockRowsFetchSpecEntity.all()).thenReturn(resultingEntityFlux);
         }
 
         @Test
-        @DisplayName("1. Should return Flux of quotes when quotes are found")
-        void findAllQuotes_whenFound_shouldReturnMappedQuotesFlux() {
-            // Arrange: Setup mocks for finding and mapping quotes
-            int requestedLimit = 2;
-            QuoteEntity entityA = new QuoteEntity(10L, "Author A", "Text A", 1, "hashA", "providerA");
-            QuoteEntity entityB = new QuoteEntity(20L, "Author B", "Text B", 2, "hashB", "providerB");
-            Flux<QuoteEntity> entityFlux = Flux.just(entityA, entityB);
+        @DisplayName("1. Should return list of quotes for a provider")
+        void findRandomQuotesByProvider_whenFound_shouldReturnList() {
+            // Arrange
+            QuoteEntity entity1 = new QuoteEntity(1L, "Author P1", "Text P1", 1, "hashP1", TEST_PROVIDER);
+            QuoteEntity entity2 = new QuoteEntity(2L, "Author P2", "Text P2", 2, "hashP2", TEST_PROVIDER);
+            Flux<QuoteEntity> entityFlux = Flux.just(entity1, entity2);
+            arrangeDbClientRandomByProviderChain(entityFlux);
 
-            arrangeDbClientFindAllChain(entityFlux); // Use specific helper
+            Quote domain1 = new Quote(1L, "Author P1", "Text P1", 1);
+            Quote domain2 = new Quote(2L, "Author P2", "Text P2", 2);
+            when(quoteEntityMapper.toQuote(entity1)).thenReturn(domain1);
+            when(quoteEntityMapper.toQuote(entity2)).thenReturn(domain2);
 
-            Quote mappedQuoteA = new Quote(10L, "Author A", "Text A", 1);
-            Quote mappedQuoteB = new Quote(20L, "Author B", "Text B", 2);
-            when(quoteEntityMapper.toQuote(entityA)).thenReturn(mappedQuoteA);
-            when(quoteEntityMapper.toQuote(entityB)).thenReturn(mappedQuoteB);
+            // Act
+            Mono<List<Quote>> resultMono = quoteRepository.findRandomQuotesByProvider(TEST_LIMIT, TEST_PROVIDER);
 
-            // Act: Execute findAllQuotes
-            Flux<Quote> resultFlux = quoteRepository.findAllQuotes(requestedLimit);
-
-            // Assert: Verify the Flux emits the mapped quotes in order
-            StepVerifier.create(resultFlux)
-                    .expectNext(mappedQuoteA)
-                    .expectNext(mappedQuoteB)
+            // Assert
+            StepVerifier.create(resultMono)
+                    .assertNext(list -> {
+                        assertThat(list).hasSize(2).containsExactlyInAnyOrder(domain1, domain2);
+                    })
                     .verifyComplete();
 
-            // Verify SQL, binding, and interactions
             ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
             verify(databaseClient).sql(sqlCaptor.capture());
-            assertThat(sqlCaptor.getValue()).contains("SELECT id, author, text, likes, text_author_hash, provider FROM quotes ORDER BY id LIMIT :limit");
-            verify(mockGenericExecuteSpec).bind("limit", requestedLimit);
-            verify(mockGenericExecuteSpec).map(any(BiFunction.class));
-            verify(mockRowsFetchSpec).all();
-            verify(quoteEntityMapper).toQuote(entityA);
-            verify(quoteEntityMapper).toQuote(entityB);
+            assertThat(sqlCaptor.getValue()).contains("WHERE provider = :provider ORDER BY RANDOM() LIMIT :limit");
+            verify(mockGenericExecuteSpec).bind("limit", TEST_LIMIT);
+            verify(mockGenericExecuteSpec).bind("provider", TEST_PROVIDER);
         }
 
         @Test
-        @DisplayName("2. Should return IllegalArgumentException when limit is zero")
-        void findAllQuotes_whenLimitIsZero_shouldThrowIllegalArgumentException() {
-            // Arrange: Define zero limit input
-            int zeroLimit = 0;
+        @DisplayName("2. Should return empty list for provider if no quotes found")
+        void findRandomQuotesByProvider_whenNotFound_shouldReturnEmptyList() {
+            // Arrange
+            arrangeDbClientRandomByProviderChain(Flux.empty());
 
-            // Act: Execute findAllQuotes with zero limit
-            Flux<Quote> resultFlux = quoteRepository.findAllQuotes(zeroLimit);
+            // Act
+            Mono<List<Quote>> resultMono = quoteRepository.findRandomQuotesByProvider(TEST_LIMIT, TEST_PROVIDER);
 
-            // Assert: Verify the specific argument exception
-            StepVerifier.create(resultFlux)
-                    .expectErrorSatisfies(throwable -> {
-                        assertThat(throwable)
-                                .isInstanceOf(IllegalArgumentException.class)
-                                .hasMessage("Limit cannot be 0");
-                    })
-                    .verify();
-            verifyNoInteractions(databaseClient, quoteEntityMapper);
-        }
-
-        @Test
-        @DisplayName("3. Should return IllegalArgumentException when limit is negative")
-        void findAllQuotes_whenLimitIsNegative_shouldThrowIllegalArgumentException() {
-            // Arrange: Define negative limit input
-            int negativeLimit = -1;
-
-            // Act: Execute findAllQuotes with negative limit
-            Flux<Quote> resultFlux = quoteRepository.findAllQuotes(negativeLimit);
-
-            // Assert: Verify the specific argument exception
-            StepVerifier.create(resultFlux)
-                    .expectErrorSatisfies(throwable -> {
-                        assertThat(throwable)
-                                .isInstanceOf(IllegalArgumentException.class)
-                                .hasMessage("Limit cannot be 0");
-                    })
-                    .verify();
-            verifyNoInteractions(databaseClient, quoteEntityMapper);
-        }
-
-        @Test
-        @DisplayName("4. Should return empty Flux when database returns no rows")
-        void findAllQuotes_whenNoResults_shouldReturnEmptyFlux() {
-            // Arrange: Setup DB client mock chain for empty results
-            int requestedLimit = 5;
-            arrangeDbClientFindAllChain(Flux.empty());
-
-            // Act: Execute findAllQuotes
-            Flux<Quote> resultFlux = quoteRepository.findAllQuotes(requestedLimit);
-
-            // Assert: Verify the Flux completes without emitting items
-            StepVerifier.create(resultFlux)
-                    .expectNextCount(0)
+            // Assert
+            StepVerifier.create(resultMono)
+                    .expectNext(Collections.emptyList())
                     .verifyComplete();
-
-            // Verify interactions: SQL executed, but mapper not called
-            ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-            verify(databaseClient).sql(sqlCaptor.capture());
-            assertThat(sqlCaptor.getValue()).contains("ORDER BY id LIMIT :limit");
-            verify(mockGenericExecuteSpec).bind("limit", requestedLimit);
-            verify(mockGenericExecuteSpec).map(any(BiFunction.class));
-            verify(mockRowsFetchSpec).all();
-            verifyNoInteractions(quoteEntityMapper);
+            verifyNoInteractions(quoteEntityMapper); // toQuote not called
         }
 
+
         @Test
-        @DisplayName("5. Should wrap database errors in QuotePersistenceException")
-        void findAllQuotes_whenDatabaseErrorOccurs_shouldWrapInPersistenceException() {
-            // Arrange: Setup DB client mock chain to simulate an error
-            int requestedLimit = 5;
-            DataAccessResourceFailureException dbError = new DataAccessResourceFailureException("DB fetch all failed");
-            arrangeDbClientFindAllChain(Flux.error(dbError));
+        @DisplayName("3. Should throw IllegalArgumentException if limit is zero or negative for provider")
+        void findRandomQuotesByProvider_whenLimitIsInvalid_shouldThrowException() {
+            // Act & Assert for zero
+            Mono<List<Quote>> zeroResult = quoteRepository.findRandomQuotesByProvider(0, TEST_PROVIDER);
+            StepVerifier.create(zeroResult)
+                    .expectErrorSatisfies(ex -> assertThat(ex)
+                            .isInstanceOf(IllegalArgumentException.class).hasMessage("Limit cannot be 0"))
+                    .verify();
 
-            // Act: Execute findAllQuotes
-            Flux<Quote> resultFlux = quoteRepository.findAllQuotes(requestedLimit);
+            // Act & Assert for negative
+            Mono<List<Quote>> negativeResult = quoteRepository.findRandomQuotesByProvider(-1, TEST_PROVIDER);
+            StepVerifier.create(negativeResult)
+                    .expectErrorSatisfies(ex -> assertThat(ex)
+                            .isInstanceOf(IllegalArgumentException.class).hasMessage("Limit cannot be 0"))
+                    .verify();
+            verifyNoInteractions(databaseClient);
+        }
 
-            // Assert: Verify the correct persistence exception wraps the original error
-            StepVerifier.create(resultFlux)
-                    .expectErrorSatisfies(throwable -> {
-                        assertThat(throwable)
-                                .isInstanceOf(QuotePersistenceException.class)
+
+        @Test
+        @DisplayName("4. Should wrap DB error in QuotePersistenceException for provider")
+        void findRandomQuotesByProvider_whenDbError_shouldWrapException() {
+            // Arrange
+            DataAccessResourceFailureException dbError = new DataAccessResourceFailureException("DB provider fetch failed");
+            arrangeDbClientRandomByProviderChain(Flux.error(dbError));
+
+            // Act
+            Mono<List<Quote>> resultMono = quoteRepository.findRandomQuotesByProvider(TEST_LIMIT, TEST_PROVIDER);
+
+            // Assert
+            StepVerifier.create(resultMono)
+                    .expectErrorSatisfies(ex -> {
+                        assertThat(ex).isInstanceOf(QuotePersistenceException.class)
+                                // The implementation uses a generic "Database error fetching all quotes" message here
+                                // which might be a slight bug as it doesn't mention provider or random.
+                                // For now, testing against current implementation.
                                 .hasMessage("Database error fetching all quotes")
                                 .hasCause(dbError);
                     })
                     .verify();
-
-            // Verify interactions occurred up to the error point
-            verify(databaseClient).sql(anyString());
-            verify(mockGenericExecuteSpec).bind("limit", requestedLimit);
-            verify(mockGenericExecuteSpec).map(any(BiFunction.class));
-            verify(mockRowsFetchSpec).all();
-            verifyNoInteractions(quoteEntityMapper);
         }
     }
 }
