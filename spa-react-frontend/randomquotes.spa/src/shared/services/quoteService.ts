@@ -37,7 +37,7 @@ class QuoteService {
   }
 
   private async sendQuoteLikeRequest(
-    method: 'GET' | 'DELETE',
+    method: 'POST' | 'DELETE',
     quoteId: number
   ): Promise<QuoteData> {
     // throw new ApiError(errorMessage);
@@ -69,7 +69,7 @@ class QuoteService {
   }
 
   public async likeQuote(quoteId: number): Promise<QuoteData> {
-    return this.sendQuoteLikeRequest('GET', quoteId);
+    return this.sendQuoteLikeRequest('POST', quoteId);
   }
 
   public async unlikeQuote(quoteId: number): Promise<QuoteData> {
