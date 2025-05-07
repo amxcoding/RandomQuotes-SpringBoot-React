@@ -50,6 +50,7 @@ The app fetches random inspirational quotes from external APIs and exposes them 
 ### Prerequisites
 
 - Java 21
+- Maven
 - Node.js & npm
 - Docker
 - PostgreSQL
@@ -77,6 +78,13 @@ npm run dev
 ```
 
 #### Run backend
+
+```bash
+cd RandomQuotes-SpringBoot-React/java-springboot-backend
+
+# Install dependencies
+mvn clean install -DskipTests
+```
 
 Open java-springboot-backend in any supported IDE and start the application to run the backend.
 
