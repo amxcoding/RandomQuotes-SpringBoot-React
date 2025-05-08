@@ -38,8 +38,8 @@ The app fetches random inspirational quotes from external APIs and exposes them 
 
 ## 🧰 Tech Stack
 
-- **Backend**: Java 21, Spring Boot, WebFlux, R2DBC, PostgreSQL
-- **Frontend**: React (with TypeScript)
+- **Backend**: Java 21, Maven, Spring Boot, WebFlux, R2DBC, PostgreSQL
+- **Frontend**: TypeScript, React
 - **DevOps**: Docker, Maven
 - **API Sources**: [ZenQuotes.io](https://zenquotes.io/)
 
