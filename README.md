@@ -105,9 +105,9 @@ The backend API is available at http://localhost:8080/api/v1/.
 
 ## 📦 API Endpoints
 
-- `GET /api/quotes/random` — Returns a random quote
-- `POST /api/quotes/{id}/like` — Like a quote
-- `DELETE /api/quotes/{id}/like` — Unlike a quote
+- `GET /api/v1/quotes/random` — Returns a random quote
+- `POST /api/v1/quotes/{id}/like` — Like a quote
+- `DELETE /api/v1/quotes/{id}/like` — Unlike a quote
 - Supports content negotiation: `Accept: application/json` or `application/xml`
 
 ---
